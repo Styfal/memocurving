@@ -16,6 +16,7 @@ Customer support page, privacy policy, cookies, etc, etc
 - Anything else i forgot to mention 
 - Making the setting section actually commit changes
 - I would like users to have the ability to create there own flashcard which creates like its own unique "url" or "key". This should update the frontend in the /courses page where they can see there own cards. There is also global cards but we can talk about this later. So basically, connecting courses page, create cards page, flashcard page and test page (Hasnt been made yet)
+- (NEW) Added Testing Page under ./cards/test01. Backend has to make sure users from the create card page can also use the "create test" page to create tests and use that information there to edit the question type, answers, and questions on the testing page accordingly. 
 
 # Extra Information
 Comments have been written on the componenets section. If you can check them out that will be great. If there are any other information. Let me know! Happy Coding. 
