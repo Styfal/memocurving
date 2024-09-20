@@ -225,7 +225,7 @@ export default function TestPage() {
           </div>
         </div>
         <div className="mb-6">
-          <div className="relative w-full aspect-[4/3] cursor-pointer mb-4" onClick={flipCard}>
+          <div className="relative w-full aspect-[4/3] cursor-pointer mb-4 transition-transform duration-300 hover:scale-105" onClick={flipCard}>
             <motion.div
               className="relative w-full h-full"
               initial={false}
@@ -266,7 +266,8 @@ export default function TestPage() {
                   <RadioGroupItem value={option} id={`option-${index}`} className="peer sr-only" />
                   <Label
                     htmlFor={`option-${index}`}
-                    className="flex flex-col items-center justify-center w-full p-4 bg-popover text-popover-foreground rounded-lg border-2 border-muted cursor-pointer hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary"
+                    className="flex flex-col items-center justify-center w-full p-4 bg-popover text-popover-foreground rounded-lg border-2 border-muted cursor-pointer hover:bg-accent 
+                    hover:text-accent-foreground peer-data-[state=checked]:border-primary transition-transform duration-300 hover:scale-105"
                   >
                     {option}
                   </Label>
@@ -279,7 +280,7 @@ export default function TestPage() {
               value={userAnswer}
               onChange={(e) => setUserAnswer(e.target.value)}
               placeholder="Type your answer here"
-              className="w-full"
+              className="w-full transition-transform duration-300 hover:scale-105"
             />
           )}
         </div>

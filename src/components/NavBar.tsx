@@ -1,21 +1,37 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import Link from "next/link";
 import MaxWidthWrapper from "./MaxWidthWrapper";
 import { buttonVariants } from "./ui/button";
-import { ArrowRight, Settings, User, BookText } from "lucide-react"; 
+import { ArrowRight, Settings, User, BookText, LayoutDashboard, ChevronDown } from "lucide-react"; 
 import { LogoutLink, RegisterLink, LoginLink } from "@kinde-oss/kinde-auth-nextjs/components";
 import { useKindeBrowserClient } from "@kinde-oss/kinde-auth-nextjs";
 
-const NavBar = () => {
+type DropdownType = 'bookText' | 'user' | null;
+
+const NavBar: React.FC = () => {
   const { user, isLoading } = useKindeBrowserClient();
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [activeDropdown, setActiveDropdown] = useState<DropdownType>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const isAdmin = user?.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL;
 
-  const toggleDropdown = () => {
-    setIsDropdownOpen(!isDropdownOpen);
+  const toggleDropdown = (dropdown: DropdownType) => {
+    setActiveDropdown(activeDropdown === dropdown ? null : dropdown);
   };
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setActiveDropdown(null);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   const iconClass = "h-5 w-5"; 
 
@@ -27,33 +43,63 @@ const NavBar = () => {
             Memo<span className="text-blue-600">curve</span>
           </Link>
 
-          <div className="ml-auto h-full flex items-center space-x-4 relative">
+          <div className="ml-auto h-full flex items-center space-x-4 relative" ref={dropdownRef}>
             {!isLoading && user ? (
               <>
-                <Link
-                  href="/cards"
-                  className={buttonVariants({
-                    size: "sm",
-                    variant: "ghost",
-                  })}
-                >
-                  <BookText className={iconClass} />
-                </Link>
-
-              
                 <div className="relative">
-                  <User 
-                    className={`${iconClass} text-gray-600 hover:text-gray-900 cursor-pointer`}
-                    onClick={toggleDropdown}
-                  />
+                  <div 
+                    className={`flex items-center ${buttonVariants({
+                      size: "sm",
+                      variant: "ghost",
+                    })} cursor-pointer`}
+                    onClick={() => toggleDropdown('bookText')}
+                  >
+                    <BookText className={iconClass} />
+                    <ChevronDown className={`${iconClass} ml-1 transition-transform duration-200 ${activeDropdown === 'bookText' ? 'rotate-180' : ''}`} />
+                  </div>
 
-                
+                  <div 
+                    className={`absolute left-0 mt-2 w-48 bg-white border border-gray-200 rounded shadow-lg transition-all duration-300 ${
+                      activeDropdown === 'bookText' ? 'opacity-100 visible' : 'opacity-0 invisible'
+                    }`}
+                  >
+                    <Link
+                      href="/cards"
+                      className="block px-4 py-2 text-gray-700 hover:bg-gray-100"
+                    >
+                      Cards
+                    </Link>
+                    <Link
+                      href="/create"
+                      className="block px-4 py-2 text-gray-700 hover:bg-gray-100"
+                    >
+                      Create
+                    </Link>
+                    <Link
+                      href="/faq"
+                      className="block px-4 py-2 text-gray-700 hover:bg-gray-100"
+                    >
+                      FAQ
+                    </Link>
+                  </div>
+                </div>
+
+                <div className="relative">
+                  <div 
+                    className={`flex items-center ${buttonVariants({
+                      size: "sm",
+                      variant: "ghost",
+                    })} cursor-pointer`}
+                    onClick={() => toggleDropdown('user')}
+                  >
+                    <User className={iconClass} />
+                    <ChevronDown className={`${iconClass} ml-1 transition-transform duration-200 ${activeDropdown === 'user' ? 'rotate-180' : ''}`} />
+                  </div>
+
                   <div 
                     className={`absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded shadow-lg transition-all duration-300 ${
-                      isDropdownOpen ? 'opacity-100 visible' : 'opacity-0 invisible'
+                      activeDropdown === 'user' ? 'opacity-100 visible' : 'opacity-0 invisible'
                     }`}
-                    onMouseEnter={() => setIsDropdownOpen(true)}
-                    onMouseLeave={() => setIsDropdownOpen(false)}
                   >
                     <Link
                       href="/profile"
@@ -64,7 +110,6 @@ const NavBar = () => {
                     <LoginLink className='block px-4 py-2 text-gray-700 hover:bg-gray-100'>
                       Add Account 
                     </LoginLink>
-            
                     <LogoutLink className="block px-4 py-2 text-gray-700 hover:bg-gray-100">
                       Logout
                     </LogoutLink>
@@ -79,7 +124,7 @@ const NavBar = () => {
                       variant: "ghost",
                     })}
                   >
-                    Dashboard
+                    <LayoutDashboard className={iconClass} />
                   </Link>
                 )}
            

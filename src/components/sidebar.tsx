@@ -9,7 +9,7 @@ interface SidebarProps {
 export default function Sidebar({ currentPage, setCurrentPage }: SidebarProps) {
   return (
     <div className="w-64 bg-white shadow-md p-4">
-      <h2 className="text-2xl font-bold text-purple-800 mb-6">Flashcards</h2>
+      <h2 className="text-2xl font-bold text-cyan-800 mb-6">Flashcards</h2>
       <nav className="space-y-2">
         <Button
           variant={currentPage === 'create' ? 'default' : 'ghost'}
