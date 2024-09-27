@@ -1,5 +1,8 @@
 ## To the Development team! 
 
+# Version:  Next.js 14.2.5
+
+
 # Web App Current Progress: 
 Frontend: Complete the first draft of the landing page, the actual flashcard ui, the ui for selecting cards you made + global cards. UI for settings, UI for creating and editing cards, tests, and talking to AI. UI for the pricing page, UI for user profile.
 Backend: User Authentication (This may need to change to firebase, but we can use mongoDB and use kindeauthentication at the same time), TRPC Type safety setup. 
