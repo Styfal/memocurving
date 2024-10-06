@@ -1,30 +1,40 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import React, { useState, useRef } from 'react'
 import Image from 'next/image'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea }
-
- from "@/components/ui/textarea"
+import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { PlusIcon, SaveIcon, ImageIcon, TrashIcon, EditIcon } from 'lucide-react'
+import { z } from 'zod'
 
-interface Flashcard {
-  id: number
-  question: string
-  answer: string
-  image: string | null
+const MAX_CARDS = 50
+const MAX_WORD_COUNT = {
+  setName: 10,
+  setDescription: 50,
+  question: 100,
+  answer: 500
 }
 
-interface CardSet {
-  id: number
-  name: string
-  description: string
-  cards: Flashcard[]
-}
+const FlashcardSchema = z.object({
+  id: z.number(),
+  question: z.string().min(1).max(MAX_WORD_COUNT.question),
+  answer: z.string().min(1).max(MAX_WORD_COUNT.answer),
+  image: z.string().nullable()
+})
+
+const CardSetSchema = z.object({
+  id: z.number(),
+  name: z.string().min(1).max(MAX_WORD_COUNT.setName),
+  description: z.string().max(MAX_WORD_COUNT.setDescription),
+  cards: z.array(FlashcardSchema).min(1).max(MAX_CARDS)
+})
+
+type Flashcard = z.infer<typeof FlashcardSchema>
+type CardSet = z.infer<typeof CardSetSchema>
 
 interface TestSet {
   id: number
@@ -33,22 +43,32 @@ interface TestSet {
   questions: any[] // Simplified for this example
 }
 
+type CombinedSet = CardSet | TestSet
+
 interface EditCardSetsProps {
-  cardSets: (CardSet | TestSet)[]
-  setCardSets: React.Dispatch<React.SetStateAction<(CardSet | TestSet)[]>>
+  combinedSets: CombinedSet[]
+  setCardSets: React.Dispatch<React.SetStateAction<CardSet[]>>
   setNotification: (notification: { type: 'success' | 'error', message: string } | null) => void
 }
 
-export default function EditCardSets({ cardSets, setCardSets, setNotification }: EditCardSetsProps) {
+export default function EditCardSets({ combinedSets, setCardSets, setNotification }: EditCardSetsProps) {
   const [editingSet, setEditingSet] = useState<CardSet | null>(null)
   const [selectedSetId, setSelectedSetId] = useState<number | null>(null)
+  const [errors, setErrors] = useState<{ [key: string]: string }>({})
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  // Filter out only CardSets from CombinedSets
+  const cardSetsOnly = combinedSets.filter(
+    (set): set is CardSet => 'cards' in set && Array.isArray(set.cards)
+  )
+
   const startEditing = (setId: number) => {
-    const set = cardSets.find(s => s.id === setId)
-    if (set && 'cards' in set) {
+    const set = cardSetsOnly.find(s => s.id === setId)
+    if (set) {
       setEditingSet(set)
       setSelectedSetId(setId)
+    } else {
+      setNotification({ type: 'error', message: "You can only edit card sets, not test sets." })
     }
   }
 
@@ -92,26 +112,41 @@ export default function EditCardSets({ cardSets, setCardSets, setNotification }:
 
   const saveEditedSet = () => {
     if (editingSet) {
-      setCardSets(cardSets.map(set => 
-        set.id === editingSet.id ? editingSet : set
-      ))
-      setEditingSet(null)
-      setSelectedSetId(null)
-      setNotification({ type: 'success', message: "Card set updated successfully!" })
+      try {
+        const validatedSet = CardSetSchema.parse(editingSet)
+        setCardSets(prevSets => prevSets.map(set => 
+          set.id === validatedSet.id ? validatedSet : set
+        ))
+        setEditingSet(null)
+        setSelectedSetId(null)
+        setErrors({})
+        setNotification({ type: 'success', message: "Card set updated successfully!" })
+      } catch (error) {
+        if (error instanceof z.ZodError) {
+          const newErrors: { [key: string]: string } = {}
+          error.errors.forEach(err => {
+            newErrors[err.path.join('.')] = err.message
+          })
+          setErrors(newErrors)
+          setNotification({ type: 'error', message: "Please correct the errors in the form." })
+        }
+      }
     }
   }
 
   const deleteCardSet = (id: number) => {
-    setCardSets(cardSets.filter(set => set.id !== id))
+    setCardSets(prevSets => prevSets.filter(set => set.id !== id))
     setNotification({ type: 'success', message: "Card set deleted successfully!" })
   }
 
   const addFlashcard = () => {
-    if (editingSet) {
+    if (editingSet && editingSet.cards.length < MAX_CARDS) {
       setEditingSet({
         ...editingSet,
         cards: [...editingSet.cards, { id: Date.now(), question: '', answer: '', image: null }]
       })
+    } else {
+      setNotification({ type: 'error', message: `Maximum of ${MAX_CARDS} cards allowed.` })
     }
   }
 
@@ -129,112 +164,83 @@ export default function EditCardSets({ cardSets, setCardSets, setNotification }:
       {editingSet ? (
         <>
           <div className="space-y-2">
-            <Label htmlFor="edit-set-name" className="text-lg text-cyan-700">Set Name (10 words max)</Label>
+            <Label htmlFor="setName">Set Name</Label>
             <Input
-              id="edit-set-name"
+              id="setName"
               value={editingSet.name}
               onChange={(e) => setEditingSet({ ...editingSet, name: e.target.value })}
-              placeholder="Enter set name"
-              className="bg-white/50 border-cyan-200 focus:border-cyan-500 focus:ring-cyan-500"
+              maxLength={MAX_WORD_COUNT.setName}
             />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="edit-set-description" className="text-lg text-cyan-700">Set Description (50 words max)</Label>
+            <Label htmlFor="setDescription">Set Description</Label>
             <Textarea
-              id="edit-set-description"
+              id="setDescription"
               value={editingSet.description}
               onChange={(e) => setEditingSet({ ...editingSet, description: e.target.value })}
-              placeholder="Enter set description"
-              className="bg-white/50 border-cyan-200 focus:border-cyan-500 focus:ring-cyan-500"
+              maxLength={MAX_WORD_COUNT.setDescription}
             />
           </div>
-          {editingSet.cards.map((card) => (
+          {editingSet.cards.map((card, index) => (
             <Card key={card.id} className="bg-white/50">
               <CardContent className="p-4 grid grid-cols-2 gap-4">
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor={`edit-question-${card.id}`} className="text-lg text-cyan-700">Question</Label>
-                    <Input
-                      id={`edit-question-${card.id}`}
-                      value={card.question}
-                      onChange={(e) => updateFlashcard(card.id, 'question', e.target.value)}
-                      placeholder="Enter the question"
-                      className="mt-1 bg-white/50 border-cyan-200 focus:border-cyan-500 focus:ring-cyan-500"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor={`edit-image-${card.id}`} className="text-lg text-cyan-700">Image</Label>
-                    <div className="mt-1 flex items-center space-x-2">
+                <div>
+                  <Label htmlFor={`question-${card.id}`}>Question</Label>
+                  <Textarea
+                    id={`question-${card.id}`}
+                    value={card.question}
+                    onChange={(e) => updateFlashcard(card.id, 'question', e.target.value)}
+                    maxLength={MAX_WORD_COUNT.question}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor={`answer-${card.id}`}>Answer</Label>
+                  <Textarea
+                    id={`answer-${card.id}`}
+                    value={card.answer}
+                    onChange={(e) => updateFlashcard(card.id, 'answer', e.target.value)}
+                    maxLength={MAX_WORD_COUNT.answer}
+                  />
+                </div>
+                <div className="col-span-2">
+                  <Label htmlFor={`image-${card.id}`}>Image</Label>
+                  <Input
+                    id={`image-${card.id}`}
+                    type="file"
+                    onChange={(e) => handleImageUpload(card.id, e)}
+                    accept="image/*"
+                    className="hidden"
+                    ref={fileInputRef}
+                  />
+                  {card.image ? (
+                    <div className="relative w-full h-40">
+                      <Image src={card.image} alt="Card image" layout="fill" objectFit="contain" />
                       <Button
-                        type="button"
-                        onClick={() => fileInputRef.current?.click()}
-                        className="bg-cyan-600 hover:bg-cyan-700 text-white"
+                        onClick={() => removeImage(card.id)}
+                        className="absolute top-0 right-0 bg-red-500 hover:bg-red-600 text-white"
                       >
-                        <ImageIcon className="mr-2 h-4 w-4" />
-                        Upload Image
+                        Remove Image
                       </Button>
-                      <input
-                        type="file"
-                        id={`edit-image-${card.id}`}
-                        ref={fileInputRef}
-                        className="hidden"
-                        accept="image/*"
-                        onChange={(e) => handleImageUpload(card.id, e)}
-                      />
-                      {card.image && (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() => removeImage(card.id)}
-                          className="text-red-500 hover:text-red-700"
-                        >
-                          <TrashIcon className="mr-2 h-4 w-4" />
-                          Remove Image
-                        </Button>
-                      )}
                     </div>
-                    {card.image && (
-                      <div className="mt-2 relative w-full h-40">
-                        <Image
-                          src={card.image}
-                          alt="Uploaded image"
-                          layout="fill"
-                          objectFit="contain"
-                        />
-                      </div>
-                    )}
-                  </div>
+                  ) : (
+                    <Button onClick={() => fileInputRef.current?.click()}>
+                      <ImageIcon className="mr-2 h-4 w-4" />
+                      Upload Image
+                    </Button>
+                  )}
                 </div>
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor={`edit-answer-${card.id}`} className="text-lg text-cyan-700">Answer</Label>
-                    <Input
-                      id={`edit-answer-${card.id}`}
-                      value={card.answer}
-                      onChange={(e) => updateFlashcard(card.id, 'answer', e.target.value)}
-                      placeholder="Enter the answer"
-                      className="mt-1 bg-white/50 border-cyan-200 focus:border-cyan-500 focus:ring-cyan-500"
-                    />
-                  </div>
-                  <Button
-                    variant="destructive"
-                    onClick={() => removeFlashcard(card.id)}
-                    className="w-full mt-2"
-                  >
-                    <TrashIcon className="mr-2 h-4 w-4" />
-                    Remove Card
-                  </Button>
-                </div>
+                <Button onClick={() => removeFlashcard(card.id)} variant="destructive" className="col-span-2">
+                  <TrashIcon className="mr-2 h-4 w-4" />
+                  Remove Card
+                </Button>
               </CardContent>
             </Card>
           ))}
-          <div className="flex justify-between mt-6">
-            <Button onClick={addFlashcard} className="bg-cyan-600 hover:bg-cyan-700 text-white">
-              <PlusIcon className="mr-2 h-5 w-5" />
-              Add More Cards
+          <div className="flex justify-between">
+            <Button onClick={addFlashcard} className="bg-green-600 hover:bg-green-700 text-white">
+              <PlusIcon className="mr-2 h-4 w-4" />
+              Add Card
             </Button>
-            <Button onClick={saveEditedSet} className="bg-green-600 hover:bg-green-700 text-white">
-              <SaveIcon className="mr-2 h-5 w-5" />
+            <Button onClick={saveEditedSet} className="bg-blue-600 hover:bg-blue-700 text-white">
+              <SaveIcon className="mr-2 h-4 w-4" />
               Save Changes
             </Button>
           </div>
@@ -246,32 +252,40 @@ export default function EditCardSets({ cardSets, setCardSets, setNotification }:
               <SelectValue placeholder="Select a card set to edit" />
             </SelectTrigger>
             <SelectContent>
-              {cardSets.map((set) => (
-                <SelectItem key={set.id} value={set.id.toString()}>{set.name}</SelectItem>
-              ))}
+              {cardSetsOnly.length > 0 ? (
+                cardSetsOnly.map((set) => (
+                  <SelectItem key={set.id} value={set.id.toString()}>{set.name}</SelectItem>
+                ))
+              ) : (
+                <SelectItem value="no-sets" disabled>No card sets available</SelectItem>
+              )}
             </SelectContent>
           </Select>
-          {cardSets.map((set) => (
-            <Card key={set.id} className="bg-white/50">
-              <CardContent className="p-4">
-                <h3 className="text-lg font-semibold text-cyan-700">{set.name}</h3>
-                <p className="text-sm text-gray-600 mt-1">{set.description}</p>
-                <p className="text-sm text-gray-600 mt-1">
-                  {('cards' in set) ? `Cards: ${set.cards.length}` : `Questions: ${set.questions.length}`}
-                </p>
-                <div className="flex justify-end space-x-2 mt-4">
-                  <Button onClick={() => startEditing(set.id)} className="bg-blue-600 hover:bg-blue-700 text-white">
-                    <EditIcon className="mr-2 h-4 w-4" />
-                    Edit
-                  </Button>
-                  <Button onClick={() => deleteCardSet(set.id)} variant="destructive">
-                    <TrashIcon className="mr-2 h-4 w-4" />
-                    Delete
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+          {cardSetsOnly.length > 0 ? (
+            cardSetsOnly.map((set) => (
+              <Card key={set.id} className="bg-white/50">
+                <CardContent className="p-4">
+                  <h3 className="text-lg font-semibold text-purple-700">{set.name}</h3>
+                  <p className="text-sm text-gray-600 mt-1">{set.description}</p>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Cards: {set.cards.length}
+                  </p>
+                  <div className="flex justify-end space-x-2 mt-4">
+                    <Button onClick={() => startEditing(set.id)} className="bg-blue-600 hover:bg-blue-700 text-white">
+                      <EditIcon className="mr-2 h-4 w-4" />
+                      Edit
+                    </Button>
+                    <Button onClick={() => deleteCardSet(set.id)} variant="destructive">
+                      <TrashIcon className="mr-2 h-4 w-4" />
+                      Delete
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          ) : (
+            <p className="text-center text-gray-500">No card sets available. Create a new set to get started.</p>
+          )}
         </>
       )}
     </div>

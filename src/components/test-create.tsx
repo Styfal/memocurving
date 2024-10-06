@@ -1,3 +1,5 @@
+'use client'
+
 import { useState, useRef } from 'react'
 import Image from 'next/image'
 import { Button } from "@/components/ui/button"
@@ -7,61 +9,61 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { PlusIcon, SaveIcon, ImageIcon, TrashIcon } from 'lucide-react'
+import { z } from 'zod'
 
-
-// Need to setup backend stuff here too! 
-// I need to make a UI for the test itself lol forgot about that!
-
-interface Flashcard {
-  id: number
-  question: string
-  answer: string
-  image: string | null
+const MAX_QUESTIONS = 50
+const MAX_WORD_COUNT = {
+  setName: 10,
+  setDescription: 50,
+  question: 100,
+  answer: 500,
+  option: 100
 }
 
-interface CardSet {
-  id: number
-  name: string
-  description: string
-  cards: Flashcard[]
-}
+const TestQuestionSchema = z.object({
+  id: z.number(),
+  question: z.string().min(1).max(MAX_WORD_COUNT.question),
+  answerType: z.enum(['multiple', 'short']),
+  options: z.array(z.string().max(MAX_WORD_COUNT.option)).optional(),
+  correctAnswer: z.string().min(1).max(MAX_WORD_COUNT.answer),
+  image: z.string().nullable()
+})
 
-interface TestQuestion {
-  id: number
-  question: string
-  answerType: 'multiple' | 'short'
-  options?: string[]
-  correctAnswer: string
-  image: string | null
-}
+const TestSetSchema = z.object({
+  id: z.number(),
+  name: z.string().min(1).max(MAX_WORD_COUNT.setName),
+  description: z.string().max(MAX_WORD_COUNT.setDescription),
+  questions: z.array(TestQuestionSchema).min(1).max(MAX_QUESTIONS)
+})
 
-interface TestSet {
-  id: number
-  name: string
-  description: string
-  questions: TestQuestion[]
-}
+type TestQuestion = z.infer<typeof TestQuestionSchema>
+type TestSet = z.infer<typeof TestSetSchema>
 
 interface TestCreateProps {
-  setCardSets: React.Dispatch<React.SetStateAction<(CardSet | TestSet)[]>>
+  setTestSets: React.Dispatch<React.SetStateAction<TestSet[]>>
   setNotification: (notification: { type: 'success' | 'error', message: string } | null) => void
 }
 
-export default function TestCreate({ setCardSets, setNotification }: TestCreateProps) {
+export default function TestCreate({ setTestSets, setNotification }: TestCreateProps) {
   const [testQuestions, setTestQuestions] = useState<TestQuestion[]>([])
   const [testSetName, setTestSetName] = useState('')
   const [testSetDescription, setTestSetDescription] = useState('')
+  const [errors, setErrors] = useState<{ [key: string]: string }>({})
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const addTestQuestion = () => {
-    setTestQuestions([...testQuestions, {
-      id: Date.now(),
-      question: '',
-      answerType: 'multiple',
-      options: ['', '', '', ''],
-      correctAnswer: '',
-      image: null
-    }])
+    if (testQuestions.length < MAX_QUESTIONS) {
+      setTestQuestions([...testQuestions, {
+        id: Date.now(),
+        question: '',
+        answerType: 'multiple',
+        options: ['', '', '', ''],
+        correctAnswer: '',
+        image: null
+      }])
+    } else {
+      setNotification({ type: 'error', message: `Maximum of ${MAX_QUESTIONS} questions allowed.` })
+    }
   }
 
   const updateTestQuestion = (id: number, field: keyof TestQuestion, value: any) => {
@@ -94,60 +96,72 @@ export default function TestCreate({ setCardSets, setNotification }: TestCreateP
   }
 
   const saveTestSet = () => {
-    if (testQuestions.length > 0 && testSetName.trim()) {
+    try {
       const newTestSet: TestSet = {
         id: Date.now(),
-        name: testSetName.trim().split(' ').slice(0, 10).join(' '),
-        description: testSetDescription.trim().split(' ').slice(0, 50).join(' '),
+        name: testSetName,
+        description: testSetDescription,
         questions: testQuestions
       }
-      setCardSets(prev => [...prev, newTestSet])
-      setNotification({ type: 'success', message: `Test set "${newTestSet.name}" saved successfully!` })
+      const validatedSet = TestSetSchema.parse(newTestSet)
+      setTestSets(prev => [...prev, validatedSet])
+      setNotification({ type: 'success', message: `Test set "${validatedSet.name}" saved successfully!` })
       setTestQuestions([])
       setTestSetName('')
       setTestSetDescription('')
-    } else {
-      setNotification({ type: 'error', message: "Please add at least one question and provide a name for the test set." })
+      setErrors({})
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const newErrors: { [key: string]: string } = {}
+        error.errors.forEach(err => {
+          newErrors[err.path.join('.')] = err.message
+        })
+        setErrors(newErrors)
+        setNotification({ type: 'error', message: "Please correct the errors in the form." })
+      }
     }
   }
 
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="test-set-name" className="text-lg text-cyan-700">Test Set Name (10 words max)</Label>
+        <Label htmlFor="test-set-name" className="text-lg text-purple-700">Test Set Name ({MAX_WORD_COUNT.setName} words max)</Label>
         <Input
           id="test-set-name"
           value={testSetName}
           onChange={(e) => setTestSetName(e.target.value)}
           placeholder="Enter test set name"
-          className="bg-white/50 border-cyan-200 focus:border-cyan-500 focus:ring-cyan-500"
+          className="bg-white/50 border-purple-200 focus:border-purple-500 focus:ring-purple-500"
         />
+        {errors['name'] && <p className="text-red-500 text-sm">{errors['name']}</p>}
       </div>
       <div className="space-y-2">
-        <Label htmlFor="test-set-description" className="text-lg text-cyan-700">Test Set Description (50 words max)</Label>
+        <Label htmlFor="test-set-description" className="text-lg text-purple-700">Test Set Description ({MAX_WORD_COUNT.setDescription} words max)</Label>
         <Textarea
           id="test-set-description"
           value={testSetDescription}
           onChange={(e) => setTestSetDescription(e.target.value)}
           placeholder="Enter test set description"
-          className="bg-white/50 border-cyan-200 focus:border-cyan-500 focus:ring-cyan-500"
+          className="bg-white/50 border-purple-200 focus:border-purple-500 focus:ring-purple-500"
         />
+        {errors['description'] && <p className="text-red-500 text-sm">{errors['description']}</p>}
       </div>
-      {testQuestions.map((question) => (
+      {testQuestions.map((question, index) => (
         <Card key={question.id} className="bg-white/50">
           <CardContent className="p-4 space-y-4">
             <div>
-              <Label htmlFor={`test-question-${question.id}`} className="text-lg text-cyan-700">Question</Label>
+              <Label htmlFor={`test-question-${question.id}`} className="text-lg text-purple-700">Question ({MAX_WORD_COUNT.question} words max)</Label>
               <Input
                 id={`test-question-${question.id}`}
                 value={question.question}
                 onChange={(e) => updateTestQuestion(question.id, 'question', e.target.value)}
                 placeholder="Enter the question"
-                className="mt-1 bg-white/50 border-cyan-200 focus:border-cyan-500 focus:ring-cyan-500"
+                className="mt-1 bg-white/50 border-purple-200 focus:border-purple-500 focus:ring-purple-500"
               />
+              {errors[`questions.${index}.question`] && <p className="text-red-500 text-sm">{errors[`questions.${index}.question`]}</p>}
             </div>
             <div>
-              <Label className="text-lg text-cyan-700">Answer Type</Label>
+              <Label className="text-lg text-purple-700">Answer Type</Label>
               <RadioGroup
                 value={question.answerType}
                 onValueChange={(value) => updateTestQuestion(question.id, 'answerType', value as 'multiple' | 'short')}
@@ -165,95 +179,67 @@ export default function TestCreate({ setCardSets, setNotification }: TestCreateP
             </div>
             {question.answerType === 'multiple' && (
               <div className="space-y-2">
-                <Label className="text-lg text-cyan-700">Options</Label>
-                {question.options?.map((option, index) => (
+                <Label className="text-lg text-purple-700">Options ({MAX_WORD_COUNT.option} words max each)</Label>
+                {question.options?.map((option, optionIndex) => (
                   <Input
-                    key={index}
+                    key={optionIndex}
                     value={option}
                     onChange={(e) => {
                       const newOptions = [...(question.options || [])]
-                      newOptions[index] = e.target.value
+                      newOptions[optionIndex] = e.target.value
                       updateTestQuestion(question.id, 'options', newOptions)
                     }}
-                    placeholder={`Option ${index + 1}`}
-                    className="mt-1 bg-white/50 border-cyan-200 focus:border-cyan-500 focus:ring-cyan-500"
+                    placeholder={`Option ${optionIndex + 1}`}
+                    className="mt-1 bg-white/50 border-purple-200 focus:border-purple-500 focus:ring-purple-500"
                   />
                 ))}
+                {errors[`questions.${index}.options`] && <p className="text-red-500 text-sm">{errors[`questions.${index}.options`]}</p>}
               </div>
             )}
             <div>
-              <Label htmlFor={`correct-answer-${question.id}`} className="text-lg text-cyan-700">Correct Answer</Label>
+              <Label htmlFor={`correct-answer-${question.id}`} className="text-lg text-purple-700">Correct Answer ({MAX_WORD_COUNT.answer} words max)</Label>
               <Input
                 id={`correct-answer-${question.id}`}
                 value={question.correctAnswer}
                 onChange={(e) => updateTestQuestion(question.id, 'correctAnswer', e.target.value)}
                 placeholder="Enter the correct answer"
-                className="mt-1 bg-white/50 border-cyan-200 focus:border-cyan-500 focus:ring-cyan-500"
+                className="mt-1 bg-white/50 border-purple-200 focus:border-purple-500 focus:ring-purple-500"
               />
+              {errors[`questions.${index}.correctAnswer`] && <p className="text-red-500 text-sm">{errors[`questions.${index}.correctAnswer`]}</p>}
             </div>
-            <div>
-              <Label htmlFor={`test-image-${question.id}`} className="text-lg text-cyan-700">Image</Label>
-              <div className="mt-1 flex items-center space-x-2">
-                <Button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="bg-cyan-600 hover:bg-cyan-700 text-white"
-                >
-                  <ImageIcon className="mr-2 h-4 w-4" />
-                  Upload Image
-                </Button>
-                <input
-                  type="file"
-                  id={`test-image-${question.id}`}
-                  ref={fileInputRef}
-                  className="hidden"
-                  accept="image/*"
-                  onChange={(e) => handleImageUpload(question.id, e)}
-                />
-                {question.image && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => removeImage(question.id)}
-                    className="text-red-500 hover:text-red-700"
-                  >
-                    <TrashIcon className="mr-2 h-4 w-4" />
-                    Remove Image
-                  </Button>
-                )}
-              </div>
+            <div className="space-y-2">
+              <Label className="text-lg text-purple-700">Upload Image (optional)</Label>
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={(e) => handleImageUpload(question.id, e)}
+                className="block text-sm text-purple-700 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-purple-700 file:text-white hover:file:bg-purple-600"
+              />
               {question.image && (
-                <div className="mt-2 relative w-full h-40">
-                  <Image
-                    src={question.image}
-                    alt="Uploaded image"
-                    layout="fill"
-                    objectFit="contain"
-                  />
+                <div className="mt-2 flex items-center space-x-2">
+                  <Image src={question.image} alt={`Question ${index + 1} Image`} width={50} height={50} className="rounded" />
+                  <Button variant="destructive" size="sm" onClick={() => removeImage(question.id)}>
+                    <TrashIcon className="w-4 h-4 mr-1" />
+                    Remove
+                  </Button>
                 </div>
               )}
             </div>
-            <Button
-              variant="destructive"
-              onClick={() => removeTestQuestion(question.id)}
-              className="w-full mt-2"
-            >
-              <TrashIcon className="mr-2 h-4 w-4" />
-              Remove Question
+            <Button variant="destructive" size="sm" onClick={() => removeTestQuestion(question.id)}>
+              <TrashIcon className="w-4 h-4 mr-1" />
+              Delete Question
             </Button>
           </CardContent>
         </Card>
       ))}
-      <div className="flex justify-between mt-6">
-        <Button onClick={addTestQuestion} className="bg-cyan-600 hover:bg-cyan-700 text-white">
-          <PlusIcon className="mr-2 h-5 w-5" />
-          Add More Questions
-        </Button>
-        <Button onClick={saveTestSet} className="bg-green-600 hover:bg-green-700 text-white">
-          <SaveIcon className="mr-2 h-5 w-5" />
-          Save Test Set
-        </Button>
-      </div>
+      <Button variant="secondary" onClick={addTestQuestion} disabled={testQuestions.length >= MAX_QUESTIONS}>
+        <PlusIcon className="w-4 h-4 mr-2" />
+        Add Question
+      </Button>
+      <Button variant="default" onClick={saveTestSet} disabled={!testSetName || !testQuestions.length}>
+        <SaveIcon className="w-4 h-4 mr-2" />
+        Save Test Set
+      </Button>
     </div>
   )
 }

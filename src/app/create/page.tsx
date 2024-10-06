@@ -1,12 +1,12 @@
 "use client"
 
-import CreateCards from "@/components/createcard"
+import CreateCardSet from "@/components/createcard"
 
 const Page= () => {
 
    return( 
 
-    <CreateCards/>
+   <CreateCardSet/>
   
    )
     
