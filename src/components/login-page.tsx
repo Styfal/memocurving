@@ -7,11 +7,48 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import {useCreateUserWithEmailAndPassword} from "react-firebase-hooks/auth"
+import {auth} from "../../firebase"
+import {Auth, createUserWithEmailAndPassword, sendSignInLinkToEmail} from "firebase/auth";
+import { useSignInWithEmailAndPassword } from "react-firebase-hooks/auth"
+import { useRouter } from "next/navigation"
 
 export default function LoginPage() {
-  const [isLogin, setIsLogin] = useState(true)
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [isLogin, setIsLogin] = useState(true);
+  const router = useRouter();
 
   const toggleView = () => setIsLogin(!isLogin)
+
+  const [CreateUserWithEmailAndPassword] =  useCreateUserWithEmailAndPassword(auth);
+  const [signInWithEmailandPassword] = useSignInWithEmailAndPassword(auth);
+
+  const handleSignin = async () => {
+    try {
+      const res = await signInWithEmailandPassword(email, password);
+      console.log({res});
+      setEmail('');
+      setPassword('');
+      sessionStorage.setItem("user", "true");
+      router.push("/");
+    }catch(e){
+      console.error(e);
+    }
+    };
+ 
+  const handleSignup = async () => {
+    try {
+      const res = await createUserWithEmailAndPassword(auth, email, password)
+      console.log({res})
+      setEmail("");
+      setPassword(""); 
+      sessionStorage.setItem("user", "true");
+      } catch(e){
+        console.error(e);
+      }
+  };
+
 
   return (
     <div className="flex min-h-screen bg-white">

@@ -7,6 +7,8 @@ import { buttonVariants } from "./ui/button";
 import { ArrowRight, Settings, User, BookText, LayoutDashboard, ChevronDown } from "lucide-react"; 
 import { LogoutLink, RegisterLink, LoginLink } from "@kinde-oss/kinde-auth-nextjs/components";
 import { useKindeBrowserClient } from "@kinde-oss/kinde-auth-nextjs";
+import { signOut } from 'firebase/auth';
+import { auth } from '../../firebase';
 
 type DropdownType = 'bookText' | 'user' | null;
 
@@ -113,9 +115,14 @@ const NavBar: React.FC = () => {
                     <LoginLink className='block px-4 py-2 text-gray-700 hover:bg-gray-100'>
                       Add Account 
                     </LoginLink>
-                    <LogoutLink className="block px-4 py-2 text-gray-700 hover:bg-gray-100">
+                    <button onClick= {() => {
+                    signOut(auth)
+                    sessionStorage.removeItem("user")
+                    }
+                  }
+                    className="block px-4 py-2 text-gray-700 hover:bg-gray-100">
                       Logout
-                    </LogoutLink>
+                    </button>
                   </div>
                 </div>
 
