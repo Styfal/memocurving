@@ -26,7 +26,6 @@ const FlashcardSchema = z.object({
 })
 
 const CardSetSchema = z.object({
-  id: z.number(),
   name: z.string().min(1).max(MAX_WORD_COUNT.setName),
   description: z.string().max(MAX_WORD_COUNT.setDescription),
   cards: z.array(FlashcardSchema).min(1).max(MAX_CARDS)
@@ -80,17 +79,44 @@ export default function CreateCardSet({ setCardSets, setNotification }: CreateCa
     ))
   }
 
-  const saveFlashcards = () => {
+  const saveFlashcards = async () => {
     try {
-      const newSet: CardSet = {
-        id: Date.now(),
+      // Add console.log to help debug validation issues
+      console.log('Attempting to save:', {
+        name: setName,
+        description: setDescription,
+        cards: flashcards
+      })
+  
+      const newSet = {
         name: setName,
         description: setDescription,
         cards: flashcards
       }
+      
+      // First validate the data
       const validatedSet = CardSetSchema.parse(newSet)
-      setCardSets(prev => [...prev, validatedSet])
+      
+      // Make API call to save the data
+      const response = await fetch('/api/cardsets', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(validatedSet)
+      })
+  
+      const result = await response.json()
+  
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to save card set')
+      }
+  
+      // Update local state
+      setCardSets(prev => [...prev, result.data])
       setNotification({ type: 'success', message: `Card set "${validatedSet.name}" saved successfully!` })
+      
+      // Reset form
       setFlashcards([{ id: Date.now(), question: '', answer: '', image: null }])
       setSetName('')
       setSetDescription('')
@@ -99,10 +125,17 @@ export default function CreateCardSet({ setCardSets, setNotification }: CreateCa
       if (error instanceof z.ZodError) {
         const newErrors: { [key: string]: string } = {}
         error.errors.forEach(err => {
+          console.log('Validation error:', err) // Add this to see specific validation errors
           newErrors[err.path.join('.')] = err.message
         })
         setErrors(newErrors)
         setNotification({ type: 'error', message: "Please correct the errors in the form." })
+      } else {
+        console.error('Non-validation error:', error) // Add this to see other errors
+        setNotification({ 
+          type: 'error', 
+          message: error instanceof Error ? error.message : "Failed to save card set" 
+        })
       }
     }
   }

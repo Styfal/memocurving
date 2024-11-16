@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { useAuthState } from "react-firebase-hooks/auth";
 import { Auth } from "firebase/auth";
-import {auth} from "../../firebase";
+import {auth} from "../lib/firebase";
 import { useRouter } from "next/navigation";
 
 
