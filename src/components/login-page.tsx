@@ -1,5 +1,3 @@
-'use client'
-
 import { useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
@@ -11,7 +9,7 @@ import {useCreateUserWithEmailAndPassword} from "react-firebase-hooks/auth"
 import {auth} from "../../firebase"
 import {Auth, createUserWithEmailAndPassword, sendSignInLinkToEmail} from "firebase/auth";
 import { useSignInWithEmailAndPassword } from "react-firebase-hooks/auth"
-import { useRouter } from "next/navigation"
+import { useRouter, redirect } from "next/navigation"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -28,21 +26,23 @@ export default function LoginPage() {
     try {
       const res = await signInWithEmailandPassword(email, password);
       console.log({res});
-      setEmail('');
-      setPassword('');
+      // setPassword('');
+      // setEmail('');
       sessionStorage.setItem("user", "true");
-      router.push("/");
+    
     }catch(e){
       console.error(e);
     }
+
+    redirect("/");
     };
  
   const handleSignup = async () => {
     try {
       const res = await createUserWithEmailAndPassword(auth, email, password)
       console.log({res})
-      setEmail("");
-      setPassword(""); 
+      // setEmail("");
+      // setPassword(""); 
       sessionStorage.setItem("user", "true");
       } catch(e){
         console.error(e);

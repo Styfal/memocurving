@@ -9,16 +9,6 @@ import { useRouter } from "next/navigation";
 
 export function Courses() {
 
-const [user] = useAuthState(auth);
-const router = useRouter();
-const userSession = sessionStorage.getItem("user");
-
-console.log({user})
-
-if (!user && !userSession){
-  router.push("/login")
-}
-
   return (
     <div className="w-full min-h-screen bg-background">
       <header className="py-12 px-4 md:px-6">

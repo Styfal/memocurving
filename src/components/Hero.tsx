@@ -13,9 +13,7 @@ export function Hero() {
       <section className="pt-10 bg-[radial-gradient(ellipse_200%_100%_at_bottom_left,#a6dcff,#EAEEFE_90%)] image-fade relative min-h-screen pb-[250px]"> {/* Added pb-[150px] */}
         <div className="container relative z-10">
           <div className="max-w-2xl mb-[210px]">
-            <div className="text-sm inline-flex border bg-gradient-to-b from-cyan-500 to-cyan-600 px-3 py-1 rounded-lg tracking-tight text-white">
-              Version 2.0
-            </div>
+          
             <h1 className="text-5xl font-bold tracking-tighter bg-gradient-to-b from-black to-[#001E80] bg-clip-text text-transparent mt-6 px-2 py-2 ">
               Pathway to <span className=" bg-cyan-500 text-white px-2 rounded-lg py-2"> Productivity</span>
             </h1>
