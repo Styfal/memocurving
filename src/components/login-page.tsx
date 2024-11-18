@@ -42,7 +42,7 @@ export default function LoginPage() {
       if (!response.ok) throw new Error('Login failed');
 
       // Redirect to dashboard after successful login
-      router.push('/dashboard');
+      router.push('/');
       
       } else {
         // Handle sign-up
