@@ -19,7 +19,7 @@ export function Hero() {
             </h1>
             <p className="text-xl text-[#010D3E] tracking-tight mt-6 pr-12 px-2">
               Celebrate the joy of accomplishment with a tool designed to track your progress,
-              motivate your efforts, and celebrate your success. You can add more text here and it won't push the laptop image down.
+              motivate your efforts, and celebrate your success. 
             </p>
             <div className="flex gap-1 items-center mt-[30px]">
               <RegisterLink

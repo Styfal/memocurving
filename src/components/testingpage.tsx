@@ -359,7 +359,7 @@ export default function TestPage() {
             <DialogHeader>
               <DialogTitle>Complete the Test</DialogTitle>
               <DialogDescription>
-                You've reached the end of the flashcards. Are you ready to complete the test?
+                You reached the end of the flashcards. Are you ready to complete the test?
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>

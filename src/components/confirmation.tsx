@@ -105,7 +105,7 @@ export function ConfirmationComponent() {
                   )}
                 </Button>
                 <p className="text-sm text-gray-500 text-center">
-                  By placing your order, you agree to Memocurve's privacy notice and conditions of use.
+                  By placing your order, you agree to Memocurve&aposs privacy notice and conditions of use.
                 </p>
               </CardFooter>
             </Card>
