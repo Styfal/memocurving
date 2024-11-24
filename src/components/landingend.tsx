@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowRight, Sparkles } from "lucide-react";
-import { buttonVariants } from "./ui/button";
+import { Button, buttonVariants } from "./ui/button";
 import { LogoutLink, RegisterLink, LoginLink } from "@kinde-oss/kinde-auth-nextjs/components";
 import { useKindeBrowserClient } from "@kinde-oss/kinde-auth-nextjs";
 
@@ -25,14 +25,15 @@ export default function LandingEnd() {
               </p>
               <div className="mt-10 sm:mt-12">
 
-              <RegisterLink
-                className={`${buttonVariants({
-                size: "lg",
-                variant: "ghost",
-                  })} bg-white text-blue-600 border border-blue-600 rounded-lg shadow-md hover:scale-105 hover:text-blue-700 transition-all duration-300`}
-                  >
-                   Join Now
-              </RegisterLink>
+              <Button 
+                variant="outline"
+                className="bg-white text-blue-700 hover:scale-105
+         transition-all duration-1000"
+          
+              >
+                <Link href="/login">Join Now</Link>
+              </Button>
+
 
               </div>
               <div className="mt-10">

@@ -200,33 +200,7 @@ export default function EditCardSets({ combinedSets, setCardSets, setNotificatio
                     maxLength={MAX_WORD_COUNT.answer}
                   />
                 </div>
-                <div className="col-span-2">
-                  <Label htmlFor={`image-${card.id}`}>Image</Label>
-                  <Input
-                    id={`image-${card.id}`}
-                    type="file"
-                    onChange={(e) => handleImageUpload(card.id, e)}
-                    accept="image/*"
-                    className="hidden"
-                    ref={fileInputRef}
-                  />
-                  {card.image ? (
-                    <div className="relative w-full h-40">
-                      <Image src={card.image} alt="Card image" layout="fill" objectFit="contain" />
-                      <Button
-                        onClick={() => removeImage(card.id)}
-                        className="absolute top-0 right-0 bg-red-500 hover:bg-red-600 text-white"
-                      >
-                        Remove Image
-                      </Button>
-                    </div>
-                  ) : (
-                    <Button onClick={() => fileInputRef.current?.click()}>
-                      <ImageIcon className="mr-2 h-4 w-4" />
-                      Upload Image
-                    </Button>
-                  )}
-                </div>
+              
                 <Button onClick={() => removeFlashcard(card.id)} variant="destructive" className="col-span-2">
                   <TrashIcon className="mr-2 h-4 w-4" />
                   Remove Card
@@ -271,7 +245,7 @@ export default function EditCardSets({ combinedSets, setCardSets, setNotificatio
                     Cards: {set.cards.length}
                   </p>
                   <div className="flex justify-end space-x-2 mt-4">
-                    <Button onClick={() => startEditing(set.id)} className="bg-blue-600 hover:bg-blue-700 text-white">
+                    <Button onClick={() => startEditing(set.id)} className="bg-blue-600 hover:bg-blue-700 text-white mr-2">
                       <EditIcon className="mr-2 h-4 w-4" />
                       Edit
                     </Button>

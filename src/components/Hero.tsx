@@ -6,6 +6,7 @@ import Laptop from "../../public/computerapp.png";
 import { buttonVariants } from "./ui/button";
 import { LogoutLink, RegisterLink, LoginLink } from "@kinde-oss/kinde-auth-nextjs/components";
 import { useKindeBrowserClient } from "@kinde-oss/kinde-auth-nextjs";
+import Link from "next/link";
 
 export function Hero() {
   return (
@@ -22,14 +23,16 @@ export function Hero() {
               motivate your efforts, and celebrate your success. 
             </p>
             <div className="flex gap-1 items-center mt-[30px]">
-              <RegisterLink
-                className={buttonVariants({
-                  size: "lg",
-                  variant: "ghost",
-                }) + " bg-gradient-to-b from-cyan-500 to-cyan-600 text-white w-32 transition-transform duration-700 ease-in-and-out hover:text-white hover:scale-105"}
-              >
-                Join for Free
-              </RegisterLink>
+            <Link
+               href="/login"
+                 className={buttonVariants({
+                 size: "lg",
+                 variant: "ghost",
+                 }) + " bg-gradient-to-b from-cyan-500 to-cyan-600 text-white w-32 transition-transform duration-700 ease-in-and-out hover:text-white hover:scale-105"}
+                  >
+                 Join for Free
+            </Link>
+ 
 
               <button className="px-4 py-2 rounded-lg font-medium inline-flex items-center justify-center tracking-tight">
                 <span>Learn More</span> <ArrowRightIcon />
