@@ -26,7 +26,7 @@ const FlashcardSchema = z.object({
 })
 
 const CardSetSchema = z.object({
-  id: z.number(), // Added id field
+  id: z.number(),
   name: z.string().min(1).max(MAX_WORD_COUNT.setName),
   description: z.string().max(MAX_WORD_COUNT.setDescription),
   cards: z.array(FlashcardSchema).min(1).max(MAX_CARDS)
@@ -36,7 +36,7 @@ type Flashcard = z.infer<typeof FlashcardSchema>
 type CardSet = z.infer<typeof CardSetSchema>
 
 interface CreateCardSetProps {
-  setCardSets: React.Dispatch<React.SetStateAction<CardSet[]>>
+  setCardSets: React.Dispatch<React.SetStateAction<(CardSet)[]>>
   setNotification: (notification: { type: 'success' | 'error', message: string } | null) => void
 }
 
@@ -80,38 +80,17 @@ export default function CreateCardSet({ setCardSets, setNotification }: CreateCa
     ))
   }
 
-  const saveFlashcards = async () => {
+  const saveFlashcards = () => {
     try {
-      const newSet = {
-        id: Date.now(), // Added id generation
+      const newSet: CardSet = {
+        id: Date.now(),
         name: setName,
         description: setDescription,
         cards: flashcards
       }
-      
-      // First validate the data
       const validatedSet = CardSetSchema.parse(newSet)
-      
-      // Make API call to save the data
-      const response = await fetch('/api/cardsets', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(validatedSet)
-      })
-  
-      const result = await response.json()
-  
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to save card set')
-      }
-  
-      // Update local state
-      setCardSets(prev => [...prev, result.data])
+      setCardSets(prev => [...prev, validatedSet])
       setNotification({ type: 'success', message: `Card set "${validatedSet.name}" saved successfully!` })
-      
-      // Reset form
       setFlashcards([{ id: Date.now(), question: '', answer: '', image: null }])
       setSetName('')
       setSetDescription('')
@@ -120,17 +99,10 @@ export default function CreateCardSet({ setCardSets, setNotification }: CreateCa
       if (error instanceof z.ZodError) {
         const newErrors: { [key: string]: string } = {}
         error.errors.forEach(err => {
-          console.log('Validation error:', err)
           newErrors[err.path.join('.')] = err.message
         })
         setErrors(newErrors)
         setNotification({ type: 'error', message: "Please correct the errors in the form." })
-      } else {
-        console.error('Non-validation error:', error)
-        setNotification({ 
-          type: 'error', 
-          message: error instanceof Error ? error.message : "Failed to save card set" 
-        })
       }
     }
   }
@@ -139,10 +111,83 @@ export default function CreateCardSet({ setCardSets, setNotification }: CreateCa
     setFlashcards(flashcards.filter(card => card.id !== id))
   }
 
-  // Rest of the component remains the same...
   return (
     <div className="space-y-4">
-      {/* Existing JSX remains unchanged */}
+      <div className="space-y-2">
+        <Label htmlFor="set-name" className="text-lg text-cyan-700">Set Name ({MAX_WORD_COUNT.setName} words max)</Label>
+        <Input
+          id="set-name"
+          value={setName}
+          onChange={(e) => setSetName(e.target.value)}
+          placeholder="Enter set name"
+          className="bg-white/50 border-cyan-200 focus:border-cyan-500 focus:ring-cyan-500"
+        />
+        {errors['name'] && <p className="text-red-500 text-sm">{errors['name']}</p>}
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="set-description" className="text-lg text-cyan-700">Set Description ({MAX_WORD_COUNT.setDescription} words max)</Label>
+        <Textarea
+          id="set-description"
+          value={setDescription}
+          onChange={(e) => setSetDescription(e.target.value)}
+          placeholder="Enter set description"
+          className="bg-white/50 border-cyan-200 focus:border-cyan-500 focus:ring-cyan-500"
+        />
+        {errors['description'] && <p className="text-red-500 text-sm">{errors['description']}</p>}
+      </div>
+      {flashcards.map((card, index) => (
+        <Card key={card.id} className="bg-white/50">
+          <CardContent className="p-4 grid grid-cols-2 gap-4">
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor={`question-${card.id}`} className="text-lg text-cyan-700">Question ({MAX_WORD_COUNT.question} words max)</Label>
+                <Input
+                  id={`question-${card.id}`}
+                  value={card.question}
+                  onChange={(e) => updateFlashcard(card.id, 'question', e.target.value)}
+                  placeholder="Enter the question"
+                  className="mt-1 bg-white/50 border-cyan-200 focus:border-cyan-500 focus:ring-cyan-500"
+                />
+                {errors[`cards.${index}.question`] && <p className="text-red-500 text-sm">{errors[`cards.${index}.question`]}</p>}
+              </div>
+             
+            </div>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor={`answer-${card.id}`} className="text-lg text-cyan-700">Answer ({MAX_WORD_COUNT.answer} words max)</Label>
+                <Input
+                  id={`answer-${card.id}`}
+                  value={card.answer}
+                  onChange={(e) => updateFlashcard(card.id, 'answer', e.target.value)}
+                  placeholder="Enter the answer"
+                  className="mt-1 bg-white/50 border-cyan-200 focus:border-cyan-500 focus:ring-cyan-500"
+                />
+                {errors[`cards.${index}.answer`] && <p className="text-red-500 text-sm">{errors[`cards.${index}.answer`]}</p>}
+              </div>
+              {flashcards.length > 1 && (
+                <Button
+                  variant="destructive"
+                  onClick={() => removeFlashcard(card.id)}
+                  className="w-full mt-2"
+                >
+                  <TrashIcon className="mr-2 h-4 w-4" />
+                  Remove Card
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+      <div className="flex justify-between mt-6">
+        <Button onClick={addFlashcard} className="bg-cyan-600 hover:bg-cyan-700 text-white" disabled={flashcards.length >= MAX_CARDS}>
+          <PlusIcon className="mr-2 h-5 w-5" />
+          Add More Cards
+        </Button>
+        <Button onClick={saveFlashcards} className="bg-green-600 hover:bg-green-700 text-white">
+          <SaveIcon className="mr-2 h-5 w-5" />
+          Save Card Set
+        </Button>
+      </div>
     </div>
   )
 }
