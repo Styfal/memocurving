@@ -44,12 +44,12 @@ export default function Navbar() {
 
   // Modify navItems based on authentication status
   const navItems = [
-    { name: 'Cards', href: '/cards' },
-    { name: 'Create', href: '/create' },
     ...(user 
       ? [
           { name: 'Profile', href: '/profile' },
-          { name: 'Settings', href: '/settings'}
+          { name: 'Settings', href: '/settings'},
+          { name: 'Cards', href: '/cards' },
+          { name: 'Create', href: '/create' },
         ]
       : []
     )
