@@ -1,37 +1,56 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import React, { useState } from 'react';
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine } from 'recharts';
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ReferenceLine,
+} from 'recharts';
 import { AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
-const EbbinghausCurve = () => {
-  const [reviews, setReviews] = useState([]);
-  const [currentDay, setCurrentDay] = useState(0);
-  
+// Define types for review data
+interface Review {
+  day: number;
+  count: number;
+}
+
+// EbbinghausCurve Component
+const EbbinghausCurve: React.FC = () => {
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [currentDay, setCurrentDay] = useState<number>(0);
+
   // Calculate memory retention based on Ebbinghaus formula
-  const calculateRetention = (x, t, d) => {
+  const calculateRetention = (x: number, t: number, d: number): number => {
     return 100 * Math.pow(0.8, (x - d) / (1 + t));
   };
 
   // Generate data points for the chart
   const generateChartData = () => {
     const data = [];
-    // Only generate data up to current day
     for (let i = 0; i <= currentDay; i++) {
       // Find the most recent review before this day
       const relevantReview = [...reviews]
         .reverse()
-        .find(review => review.day <= i);
-        
+        .find((review) => review.day <= i);
+
       const t = relevantReview ? relevantReview.count : 0;
       const d = relevantReview ? relevantReview.day : 0;
-      
+
       data.push({
         day: i,
-        retention: calculateRetention(i, t, d).toFixed(1)
+        retention: parseFloat(calculateRetention(i, t, d).toFixed(1)),
       });
     }
     return data;
@@ -39,25 +58,26 @@ const EbbinghausCurve = () => {
 
   // Handle review action
   const handleReview = () => {
-    const existingReview = reviews.find(r => r.day === currentDay);
+    const existingReview = reviews.find((r) => r.day === currentDay);
     if (existingReview) {
-      setReviews(reviews.map(r => 
-        r.day === currentDay 
-          ? { ...r, count: r.count + 1 }
-          : r
-      ));
+      setReviews(
+        reviews.map((r) =>
+          r.day === currentDay ? { ...r, count: r.count + 1 } : r
+        )
+      );
     } else {
       setReviews([...reviews, { day: currentDay, count: 1 }]);
     }
   };
 
-  // Advance to next day
+  // Advance to the next day
   const nextDay = () => {
-    setCurrentDay(prev => prev + 1);
+    setCurrentDay((prev) => prev + 1);
   };
 
   const chartData = generateChartData();
-  const currentRetention = parseFloat(chartData.find(d => d.day === currentDay)?.retention || 0);
+  const currentRetention =
+    chartData.find((d) => d.day === currentDay)?.retention || 0;
   const needsReview = currentRetention <= 80;
 
   return (
@@ -75,16 +95,10 @@ const EbbinghausCurve = () => {
               </p>
             </div>
             <div className="space-x-2">
-              <Button 
-                onClick={handleReview}
-                variant="default"
-              >
+              <Button onClick={handleReview} variant="default">
                 Review Material
               </Button>
-              <Button 
-                onClick={nextDay}
-                variant="outline"
-              >
+              <Button onClick={nextDay} variant="outline">
                 Next Day
               </Button>
             </div>
@@ -94,7 +108,8 @@ const EbbinghausCurve = () => {
             <Alert>
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
-                Your retention has dropped to {currentRetention.toFixed(1)}%. Time to review!
+                Your retention has dropped to {currentRetention.toFixed(1)}%.
+                Time to review!
               </AlertDescription>
             </Alert>
           )}
@@ -107,23 +122,27 @@ const EbbinghausCurve = () => {
               margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
             >
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis 
-                dataKey="day" 
+              <XAxis
+                dataKey="day"
                 label={{ value: 'Days', position: 'bottom' }}
                 domain={[0, 'dataMax']}
                 type="number"
                 allowDecimals={false}
               />
-              <YAxis 
-                domain={[0, 100]} 
-                label={{ value: 'Retention (%)', angle: -90, position: 'left' }} 
+              <YAxis
+                domain={[0, 100]}
+                label={{
+                  value: 'Retention (%)',
+                  angle: -90,
+                  position: 'left',
+                }}
               />
               <Tooltip />
               <ReferenceLine y={80} stroke="red" strokeDasharray="3 3" />
-              <Line 
-                type="monotone" 
-                dataKey="retention" 
-                stroke="#8884d8" 
+              <Line
+                type="monotone"
+                dataKey="retention"
+                stroke="#8884d8"
                 dot={true}
                 isAnimationActive={false}
               />
