@@ -48,7 +48,7 @@ export const login = async (): Promise<User | null> => {
         return null; // Return null if login fails
     }
 };
-
+/* 
 export const listenAuthState = (dispatch: any) => {
     return onAuthStateChanged(auth, async function (user: any) {
         if (user) {
@@ -59,15 +59,17 @@ export const listenAuthState = (dispatch: any) => {
                     user,
                 },
             });
+            console.log("User logged in: ", user);
         } else {
             // User is signed out.
             // ...
             dispatch({
                 type: "logout",
             });
+            console.log("User logged out");
         }
     });
-};
+}; */
 
 
 export const logout = async (): Promise<void> => {

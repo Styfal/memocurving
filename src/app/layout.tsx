@@ -5,6 +5,7 @@ import Footer from "@/components/Footer";
 import Provider from "./_trpc/Provider";
 import Navbar from "@/components/NavBar";
 import { Toaster } from "@/components/ui/toaster"
+import { AuthProvider } from "@/lib/AuthContext";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -21,12 +22,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <Provider>
+        <AuthProvider>
           <Navbar />
           <main className="pt-10">{children}</main>
           <Toaster />
           <Footer />
-        </Provider>
+        </AuthProvider>
       </body>
     </html>
   );

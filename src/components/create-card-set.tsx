@@ -9,6 +9,9 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { PlusIcon, SaveIcon, ImageIcon, TrashIcon } from 'lucide-react'
 import { z } from 'zod'
+import { usePathname, useRouter } from 'next/navigation'
+import { AuthManager } from '@/lib/AuthManager'
+import { useAuthContext } from '@/lib/AuthContext'
 
 const MAX_CARDS = 50
 const MAX_WORD_COUNT = {
@@ -41,6 +44,18 @@ interface CreateCardSetProps {
 }
 
 export default function CreateCardSet({ setCardSets, setNotification }: CreateCardSetProps) {
+
+
+    const { user, displayName } = useAuthContext();
+    console.log(user);
+    const router = useRouter();
+
+    if (!user) {
+        router.push("/login");
+    }
+    /* const pathname = usePathname();
+    AuthManager(pathname) */
+
   const [flashcards, setFlashcards] = useState<Flashcard[]>([{ id: 1, question: '', answer: '', image: null }])
   const [setName, setSetName] = useState('')
   const [setDescription, setSetDescription] = useState('')
