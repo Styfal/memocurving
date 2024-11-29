@@ -17,7 +17,7 @@ const FlashcardSchema = z.object({
 })
 
 const CardSetSchema = z.object({
-  name: z.string(),
+  title: z.string(),
   description: z.string(),
   cards: z.array(FlashcardSchema),
   createdBy: UserSchema
@@ -30,7 +30,7 @@ export async function POST(req: Request) {
 
     // Prepare data for Firestore
     const cardSetData = {
-      name: validatedData.name,
+      title: validatedData.title,
       description: validatedData.description,
       cards: validatedData.cards.map(card => ({
         question: card.question,

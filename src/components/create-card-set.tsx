@@ -29,7 +29,7 @@ const FlashcardSchema = z.object({
 
 const CardSetSchema = z.object({
   id: z.number(),
-  name: z.string().min(1).max(MAX_WORD_COUNT.setName),
+  title: z.string().min(1).max(MAX_WORD_COUNT.setName),
   description: z.string().max(MAX_WORD_COUNT.setDescription),
   cards: z.array(FlashcardSchema).min(1).max(MAX_CARDS)
 })
@@ -103,7 +103,7 @@ export default function CreateCardSet({ setCardSets, setNotification }: CreateCa
     try {
       const newSet: CardSet = {
         id: Date.now(),
-        name: setName,
+        title: setName,
         description: setDescription,
         cards: flashcards
       }
@@ -138,7 +138,7 @@ export default function CreateCardSet({ setCardSets, setNotification }: CreateCa
       if (result.success) {
         // Update local state
         setCardSets(prev => [...prev, validatedSet])
-        setNotification({ type: 'success', message: `Card set "${validatedSet.name}" saved successfully!` })
+        setNotification({ type: 'success', message: `Card set "${validatedSet.title}" saved successfully!` })
         
         // Reset form
         setFlashcards([{ id: Date.now(), question: '', answer: '', image: null }])
