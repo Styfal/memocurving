@@ -3,8 +3,14 @@ import { collection, addDoc } from 'firebase/firestore'
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 
+// Updated schema to include user information
+const UserSchema = z.object({
+  uid: z.string(),
+  displayName: z.string().nullable(),
+  email: z.string().nullable()
+})
+
 const FlashcardSchema = z.object({
-  id: z.number(),
   question: z.string(),
   answer: z.string(),
   image: z.string().nullable()
@@ -13,7 +19,8 @@ const FlashcardSchema = z.object({
 const CardSetSchema = z.object({
   name: z.string(),
   description: z.string(),
-  cards: z.array(FlashcardSchema)
+  cards: z.array(FlashcardSchema),
+  createdBy: UserSchema
 })
 
 export async function POST(req: Request) {
@@ -21,7 +28,7 @@ export async function POST(req: Request) {
     const body = await req.json()
     const validatedData = CardSetSchema.parse(body)
 
-    // Add timestamp and format data for Firestore
+    // Prepare data for Firestore
     const cardSetData = {
       name: validatedData.name,
       description: validatedData.description,
@@ -30,6 +37,11 @@ export async function POST(req: Request) {
         answer: card.answer,
         image: card.image,
       })),
+      createdBy: {
+        uid: validatedData.createdBy.uid,
+        displayName: validatedData.createdBy.displayName || 'Anonymous',
+        email: validatedData.createdBy.email || ''
+      },
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     }
@@ -38,8 +50,8 @@ export async function POST(req: Request) {
     const docRef = await addDoc(collection(db, 'cardSets'), cardSetData)
 
     // Return the saved data with the Firestore ID
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       data: {
         id: docRef.id,
         ...cardSetData
