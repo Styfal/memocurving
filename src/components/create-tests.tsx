@@ -1,27 +1,17 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import { Button } from "./ui/button";
-import { ChevronLeft, PlusCircle, Trash2 } from "lucide-react";
-
+import { PlusCircle } from "lucide-react";
 import { Input } from "./ui/input";
-import {
-    Card,
-    CardContent,
-    CardFooter,
-    CardHeader,
-    CardTitle,
-} from "./ui/card";
-import { Label } from "./ui/label";
-import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
-
-//Validation Check Imports
-import { SubmitHandler, useFieldArray, useForm } from "react-hook-form";
+import { useFieldArray, useForm, SubmitHandler } from "react-hook-form";
+import { useAuthContext } from "@/lib/AuthContext";
+import { addDoc, collection } from "firebase/firestore";
+import { db } from "@/lib/firebase"; 
+import QuestionItem from "./test/questionItem";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useAuthContext } from "@/lib/AuthContext";
-import { root } from "postcss";
-import QuestionItem from "./test/questionItem";
+
 
 export const optionSchema = z.object({
     optionText: z.string().min(1, "Option text is required"),
@@ -36,63 +26,80 @@ export const questionSchema = z.object({
         .max(4, "Each question can have a maximum of 4 options")
         .refine((options) => options.some((o) => o.isCorrect), {
             message: "At least one option must be marked as correct",
-        }),
+        })
 });
 
 export const quizSchema = z.object({
     title: z.string().min(1, { message: "A title is required" }),
-    description: z.string(),
     questions: z
         .array(questionSchema)
         .min(1, "At least one question is required"),
     userId: z.string().min(1, "userId is required"),
 });
 
-type formFields = z.infer<typeof quizSchema>;
+type formFields = {
+    title: string;
+    questions: {
+        questionText: string;
+        options: {
+            optionText: string;
+            isCorrect: boolean;
+        }[];
+    }[];
+    userId: string;
+};
 
 const CreateTest = ({ onBack }: { onBack: () => void }) => {
+    const { user } = useAuthContext();
+
     const {
         register,
         handleSubmit,
         setError,
         control,
-        setValue,
         formState: { errors, isSubmitting },
     } = useForm<formFields>({
         defaultValues: {
             title: "",
-            description: "",
             questions: [],
         },
-        resolver: zodResolver(quizSchema),
     });
 
-    const {
-        fields,
-        append,
-        remove,
-    } = useFieldArray({
+    const { fields, append, remove } = useFieldArray({
         control,
         name: "questions",
     });
 
     const addQuestion = () => {
         append({
-            questionText: "", 
+            questionText: "",
             options: [],
-        })
-    }
+        });
+    };
 
     const removeQuestion = (index: number) => {
-        remove(index)
-    }
+        remove(index);
+    };
 
     const onSubmit: SubmitHandler<formFields> = async (data) => {
-        console.log("aaaaaa");
         try {
-            console.log(data);
-            await new Promise((resolve) => setTimeout(resolve, 1000));
+            // Add the current user's UID to the form data
+            const testData = {
+                ...data,
+                userId: user.uid,
+                createdAt: new Date(), // Add timestamp
+            };
+
+            // Save to Firestore
+            const testsCollectionRef = collection(db, "tests");
+            const docRef = await addDoc(testsCollectionRef, testData);
+
+            console.log("Test created with ID: ", docRef.id);
+            
+            // Optional: Reset form or navigate away
+            onBack(); // Or use a router to navigate to test list
         } catch (error) {
+            console.error("Error creating test:", error);
             setError("root", {
                 message: "Something went wrong when creating the test!",
             });
@@ -101,13 +108,22 @@ const CreateTest = ({ onBack }: { onBack: () => void }) => {
 
     return (
         <div className="w-full max-w-4xl">
-            <Button type="button" onClick={onBack}>Back to list</Button>
+            <Button type="button" onClick={onBack}>
+                Back to list
+            </Button>
             <form onSubmit={handleSubmit(onSubmit)}>
-
                 <div>
                     <label htmlFor="title">Title</label>
-                    <Input {...register("title")} id="title" placeholder="Enter the title of your test" />
-                    {errors.title && <div className="text-red-500">{errors.title.message}</div>}
+                    <Input
+                        {...register("title", { required: "Title is required" })}
+                        id="title"
+                        placeholder="Enter the title of your test"
+                    />
+                    {errors.title && (
+                        <div className="text-red-500">
+                            {errors.title.message}
+                        </div>
+                    )}
                 </div>
 
                 {fields.map((field, index) => (
@@ -115,7 +131,7 @@ const CreateTest = ({ onBack }: { onBack: () => void }) => {
                         key={field.id}
                         register={register}
                         control={control}
-                        errors = { errors }
+                        errors={errors}
                         questionIndex={index}
                         removeQuestion={removeQuestion}
                     />
@@ -132,6 +148,5 @@ const CreateTest = ({ onBack }: { onBack: () => void }) => {
         </div>
     );
 };
-
 
 export default CreateTest;
