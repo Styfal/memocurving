@@ -7,17 +7,23 @@ export default function TermsAndConditions() {
       <CardHeader>
         <CardTitle className="text-2xl font-bold text-center">Privacy Policy and Cookie Policy</CardTitle>
         <p className="text-center text-muted-foreground">Last Updated: November 24, 2023</p>
-      </CardHeader>
+      </CardHeader> 
       <CardContent>
         <ScrollArea className="h-[600px] w-full rounded-md border p-4">
           <div className="space-y-6">
             <section>
               <h2 className="text-xl font-semibold mb-2">1. Introduction</h2>
               <p>
-                This Privacy Policy and Cookie Policy (collectively referred to as the "Policy") sets forth the terms and conditions under which Memocurve (the "Company," "we," "us," or "our") collects, uses, discloses, and safeguards the personal information of users ("you" or "your") when accessing or utilizing our flashcard study application (the "Service"). We are firmly committed to protecting your personal information and respecting your privacy rights.
+                This Privacy Policy and Cookie Policy (collectively referred to as the &quotPolicy&quot) sets forth the terms and conditions under which Memocurve 
+                (the &quotCompany,&quot &quotwe,&quot &quotus,&quot or &quotour&quot) collects, uses, discloses, 
+                and safeguards the personal information of users (&quotyou&quot or &quotyour&quot) 
+                when accessing or utilizing our flashcard study application (the &quotService&quot). 
+                We are firmly committed to protecting your personal information and respecting your privacy rights.
               </p>
               <p className="mt-2">
-                By accessing or using the Service, you acknowledge that you have read, understood, and agree to be bound by this Policy. If you do not agree with our practices and policies, you must discontinue use of the Service immediately.
+                By accessing or using the Service, you acknowledge that you have read, 
+                understood, and agree to be bound by this Policy. If you do not agree with 
+                our practices and policies, you must discontinue use of the Service immediately.
               </p>
             </section>
 
@@ -25,7 +31,8 @@ export default function TermsAndConditions() {
               <h2 className="text-xl font-semibold mb-2">2. Company Information</h2>
               <p>Company Name: Memocurve</p>
               <p>Location: Japan</p>
-              <p>Contact Information: For any inquiries or concerns regarding this Policy, please contact us at memocurve@gmail.com.</p>
+              <p>Contact Information: For any inquiries or concerns regarding this Policy, 
+                please contact us at memocurve@gmail.com.</p>
             </section>
 
             <section>
@@ -56,7 +63,7 @@ export default function TermsAndConditions() {
                 <li>Payment Details</li>
               </ul>
               <p className="mt-2">
-                Please note that all payment transactions are processed by Stripe and are subject to Stripe's privacy policy. We do not store your full payment information on our servers.
+                Please note that all payment transactions are processed by Stripe and are subject to Stripe$aposs privacy policy. We do not store your full payment information on our servers.
               </p>
 
               <h3 className="text-lg font-medium mt-4 mb-2">3.4 Other Data</h3>
@@ -106,7 +113,7 @@ export default function TermsAndConditions() {
               <p>Cookies are employed for various purposes, including:</p>
               <ul className="list-disc list-inside ml-4">
                 <li>Session Management: To maintain your login session and remember your preferences.</li>
-                <li>Performance Enhancement: To analyze user activity and improve the Service's performance and reliability.</li>
+                <li>Performance Enhancement: To analyze user activity and improve the Service$aposs performance and reliability.</li>
                 <li>Functionality: To recognize you when you return to the Service and to personalize content.</li>
               </ul>
 
@@ -123,9 +130,9 @@ export default function TermsAndConditions() {
                 We may disclose your personal information to trusted third-party service providers who assist us in operating the Service and conducting our business, including:
               </p>
               <ul className="list-disc list-inside ml-4">
-                <li>Stripe: For secure payment processing. Your payment information is handled in accordance with Stripe's privacy policy.</li>
+                <li>Stripe: For secure payment processing. Your payment information is handled in accordance with Stripe$aposs privacy policy.</li>
                 <li>Firebase: For user authentication and secure account management.</li>
-                <li>Analytics Providers: To analyze usage data and improve the Service's performance.</li>
+                <li>Analytics Providers: To analyze usage data and improve the Service$aposs performance.</li>
               </ul>
 
               <h3 className="text-lg font-medium mt-4 mb-2">7.2 Legal Obligations and Safety</h3>
@@ -208,7 +215,7 @@ export default function TermsAndConditions() {
             </section>
 
             <section>
-              <h2 className="text-xl font-semibold mb-2">13. Children's Privacy</h2>
+              <h2 className="text-xl font-semibold mb-2">13. Children$aposs Privacy</h2>
               <p>
                 Our Service is accessible to users of all ages. However, for individuals under the age of 13, we require verifiable parental or guardian consent before collecting any personal information. We do not knowingly collect personal data from children under 13 without such consent.
               </p>
