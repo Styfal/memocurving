@@ -206,7 +206,7 @@ export default function TermsAndConditions() {
               <ul className="list-disc list-inside ml-4">
                 <li>Right of Access: To request confirmation as to whether we are processing your personal data and access to such data.</li>
                 <li>Right to Rectification: To request correction of inaccurate or incomplete personal data.</li>
-                <li>Right to Erasure ("Right to Be Forgotten"): To request the deletion of your personal data under certain conditions.</li>
+                <li>Right to Erasure ($quotRight to Be Forgotten$quot): To request the deletion of your personal data under certain conditions.</li>
                 <li>Right to Restrict Processing: To request the limitation of processing your personal data under specific circumstances.</li>
                 <li>Right to Data Portability: To receive your personal data in a structured, commonly used, and machine-readable format.</li>
                 <li>Right to Object: To object to the processing of your personal data based on legitimate interests or for direct marketing purposes.</li>
@@ -227,7 +227,10 @@ export default function TermsAndConditions() {
             <section>
               <h2 className="text-xl font-semibold mb-2">14. Changes to This Policy</h2>
               <p>
-                We reserve the right to amend this Policy at our discretion and at any time. When changes are made, we will update the "Last Updated" date at the top of this Policy. Your continued use of the Service following the posting of changes constitutes your acceptance of such changes.
+                We reserve the right to amend this 
+                Policy at our discretion and at any time. When changes are made, we will update the $quotLast Updated$quot 
+                date at the top of this Policy. Your continued use of the Service following the posting of changes c
+                onstitutes your acceptance of such changes.
               </p>
             </section>
 
