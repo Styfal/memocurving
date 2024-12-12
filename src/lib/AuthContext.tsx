@@ -14,6 +14,7 @@ type AuthContextType = {
     setUser: React.Dispatch<React.SetStateAction<User | null>>;
     userId: string | null;
     displayName: string | null;
+    loading: boolean;
 }
 
 const defaultContextData = {
@@ -21,6 +22,7 @@ const defaultContextData = {
     setUser: () => { },
     userId: null,
     displayName: null,
+    loading: true,
 };
 
 const AuthContext = React.createContext<AuthContextType>(defaultContextData);
@@ -29,6 +31,7 @@ export function AuthProvider({ children }: AuthProviderProps){
     const [user, setUser] = useState<any | null>(null);
     const [userId, setUserId] = useState<string | null>(null);
     const [displayName, setDisplayName] = useState<string | null>(null);
+    const [loading, setLoading] = useState<boolean>(true);
     // const loading = true;
 
     /* const router = useRouter();
@@ -40,6 +43,7 @@ export function AuthProvider({ children }: AuthProviderProps){
             setUser(newUser);
             setUserId(newUser ? newUser.uid : null);
             setDisplayName(newUser ? newUser.displayName : null);
+            setLoading(false);
         });
         console.log(user);
 
@@ -68,7 +72,7 @@ export function AuthProvider({ children }: AuthProviderProps){
 
 
     return (
-        <AuthContext.Provider value={{ user, userId, displayName, setUser }}>
+        <AuthContext.Provider value={{ user, userId, displayName, setUser, loading }}>
             {children}
         </AuthContext.Provider>
     )

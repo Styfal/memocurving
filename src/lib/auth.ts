@@ -28,6 +28,8 @@ export const login = async (): Promise<User | null> => {
                 name: result.user.displayName,
                 createdAt: serverTimestamp(),
                 lastLogin: serverTimestamp(),
+                language: "English",
+                isDarkMode: false,
                 //Aditional Columns for Profiles
             }
 

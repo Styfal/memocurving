@@ -10,6 +10,9 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
+import { useAuthContext } from "@/lib/AuthContext"
+import { collection, onSnapshot, orderBy, query, where } from "firebase/firestore"
+import { db } from "@/lib/firebase"
 
 type Flashcard = {
   id: number
@@ -20,32 +23,10 @@ type Flashcard = {
   redoUsed: boolean
 }
 
-export default function TestPage() {
-  const [flashcards, setFlashcards] = useState<Flashcard[]>([
-    { 
-      id: 1,
-      question: "What does HTML stand for?", 
-      answer: "HyperText Markup Language",
-      options: ["HyperText Markup Language", "HighTech Modern Language", "HyperTransfer Markup Language", "HyperText Management Language"],
-      answered: false,
-      redoUsed: false
-    },
-    { 
-      id: 2,
-      question: "What is the purpose of CSS?", 
-      answer: "To style and layout web pages",
-      answered: false,
-      redoUsed: false
-    },
-    { 
-      id: 3,
-      question: "What is JavaScript primarily used for?", 
-      answer: "To add interactivity to websites",
-      options: ["To style web pages", "To add interactivity to websites", "To create database structures", "To manage server configurations"],
-      answered: false,
-      redoUsed: false
-    },
-  ])
+export default function TestPage({ tests }: { tests: Flashcard[]}) {
+
+    console.log(tests)
+  const [flashcards, setFlashcards] = useState<Flashcard[]>(tests)
   const [currentCard, setCurrentCard] = useState(0)
   const [isFlipped, setIsFlipped] = useState(false)
   const [showCelebration, setShowCelebration] = useState(false)
