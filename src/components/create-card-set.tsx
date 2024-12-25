@@ -69,7 +69,7 @@ export default function CreateCardSet({ setCardSets, setNotification }: CreateCa
   }
 
   const updateFlashcard = (id: number, field: 'question' | 'answer', value: string) => {
-    setFlashcards(flashcards.map(card => 
+    setFlashcards(flashcards.map(card =>
       card.id === id ? { ...card, [field]: value } : card
     ))
   }
@@ -79,7 +79,7 @@ export default function CreateCardSet({ setCardSets, setNotification }: CreateCa
     if (file) {
       const reader = new FileReader()
       reader.onloadend = () => {
-        setFlashcards(flashcards.map(card => 
+        setFlashcards(flashcards.map(card =>
           card.id === id ? { ...card, image: reader.result as string } : card
         ))
       }
@@ -88,7 +88,7 @@ export default function CreateCardSet({ setCardSets, setNotification }: CreateCa
   }
 
   const removeImage = (id: number) => {
-    setFlashcards(flashcards.map(card => 
+    setFlashcards(flashcards.map(card =>
       card.id === id ? { ...card, image: null } : card
     ))
   }
@@ -139,7 +139,7 @@ export default function CreateCardSet({ setCardSets, setNotification }: CreateCa
         // Update local state
         setCardSets(prev => [...prev, validatedSet])
         setNotification({ type: 'success', message: `Card set "${validatedSet.title}" saved successfully!` })
-        
+
         // Reset form
         setFlashcards([{ id: Date.now(), question: '', answer: '', image: null }])
         setSetName('')
@@ -217,19 +217,19 @@ export default function CreateCardSet({ setCardSets, setNotification }: CreateCa
                 />
                 {errors[`cards.${index}.question`] && <p className="text-red-500 text-sm">{errors[`cards.${index}.question`]}</p>}
               </div>
-              
+
               <div>
                 <Label className="text-lg text-cyan-700">Optional Image</Label>
-                <input 
-                  type="file" 
-                  accept="image/*" 
+                <input
+                  type="file"
+                  accept="image/*"
                   onChange={(e) => handleImageUpload(card.id, e)}
                   ref={fileInputRef}
                   className="hidden"
                 />
-                <Button 
-                  variant="outline" 
-                  onClick={() => fileInputRef.current?.click()} 
+                <Button
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
                   className="w-full mt-2"
                 >
                   <ImageIcon className="mr-2 h-4 w-4" />
@@ -237,15 +237,15 @@ export default function CreateCardSet({ setCardSets, setNotification }: CreateCa
                 </Button>
                 {card.image && (
                   <div className="mt-2 relative">
-                    <img 
-                      src={card.image} 
-                      alt="Card" 
+                    <img
+                      src={card.image}
+                      alt="Card"
                       className="max-w-full h-auto rounded-md"
                     />
-                    <Button 
-                      variant="destructive" 
-                      size="sm" 
-                      onClick={() => removeImage(card.id)} 
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => removeImage(card.id)}
                       className="absolute top-2 right-2"
                     >
                       <TrashIcon className="h-4 w-4" />
@@ -267,7 +267,7 @@ export default function CreateCardSet({ setCardSets, setNotification }: CreateCa
                 />
                 {errors[`cards.${index}.answer`] && <p className="text-red-500 text-sm">{errors[`cards.${index}.answer`]}</p>}
               </div>
-              
+
               {flashcards.length > 1 && (
                 <Button
                   variant="destructive"
@@ -284,16 +284,16 @@ export default function CreateCardSet({ setCardSets, setNotification }: CreateCa
       ))}
 
       <div className="flex justify-between mt-6">
-        <Button 
-          onClick={addFlashcard} 
-          className="bg-cyan-600 hover:bg-cyan-700 text-white" 
+        <Button
+          onClick={addFlashcard}
+          className="bg-cyan-600 hover:bg-cyan-700 text-white"
           disabled={flashcards.length >= MAX_CARDS || !currentUser}
         >
           <PlusIcon className="mr-2 h-5 w-5" />
           Add More Cards
         </Button>
-        <Button 
-          onClick={saveFlashcards} 
+        <Button
+          onClick={saveFlashcards}
           className="bg-green-600 hover:bg-green-700 text-white"
           disabled={!currentUser}
         >

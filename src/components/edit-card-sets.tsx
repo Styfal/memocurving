@@ -28,7 +28,7 @@ const FlashcardSchema = z.object({
 
 const CardSetSchema = z.object({
   id: z.number(),
-  name: z.string().min(1).max(MAX_WORD_COUNT.setName),
+  title: z.string().min(1).max(MAX_WORD_COUNT.setName),
   description: z.string().max(MAX_WORD_COUNT.setDescription),
   cards: z.array(FlashcardSchema).min(1).max(MAX_CARDS)
 })
@@ -76,7 +76,7 @@ export default function EditCardSets({ combinedSets, setCardSets, setNotificatio
     if (editingSet) {
       setEditingSet({
         ...editingSet,
-        cards: editingSet.cards.map(card => 
+        cards: editingSet.cards.map(card =>
           card.id === id ? { ...card, [field]: value } : card
         )
       })
@@ -90,7 +90,7 @@ export default function EditCardSets({ combinedSets, setCardSets, setNotificatio
       reader.onloadend = () => {
         setEditingSet({
           ...editingSet,
-          cards: editingSet.cards.map(card => 
+          cards: editingSet.cards.map(card =>
             card.id === id ? { ...card, image: reader.result as string } : card
           )
         })
@@ -103,7 +103,7 @@ export default function EditCardSets({ combinedSets, setCardSets, setNotificatio
     if (editingSet) {
       setEditingSet({
         ...editingSet,
-        cards: editingSet.cards.map(card => 
+        cards: editingSet.cards.map(card =>
           card.id === id ? { ...card, image: null } : card
         )
       })
@@ -114,7 +114,7 @@ export default function EditCardSets({ combinedSets, setCardSets, setNotificatio
     if (editingSet) {
       try {
         const validatedSet = CardSetSchema.parse(editingSet)
-        setCardSets(prevSets => prevSets.map(set => 
+        setCardSets(prevSets => prevSets.map(set =>
           set.id === validatedSet.id ? validatedSet : set
         ))
         setEditingSet(null)
@@ -167,8 +167,8 @@ export default function EditCardSets({ combinedSets, setCardSets, setNotificatio
             <Label htmlFor="setName">Set Name</Label>
             <Input
               id="setName"
-              value={editingSet.name}
-              onChange={(e) => setEditingSet({ ...editingSet, name: e.target.value })}
+              value={editingSet.title}
+              onChange={(e) => setEditingSet({ ...editingSet, title: e.target.value })}
               maxLength={MAX_WORD_COUNT.setName}
             />
             <Label htmlFor="setDescription">Set Description</Label>
@@ -200,7 +200,7 @@ export default function EditCardSets({ combinedSets, setCardSets, setNotificatio
                     maxLength={MAX_WORD_COUNT.answer}
                   />
                 </div>
-              
+
                 <Button onClick={() => removeFlashcard(card.id)} variant="destructive" className="col-span-2">
                   <TrashIcon className="mr-2 h-4 w-4" />
                   Remove Card
@@ -228,7 +228,7 @@ export default function EditCardSets({ combinedSets, setCardSets, setNotificatio
             <SelectContent>
               {cardSetsOnly.length > 0 ? (
                 cardSetsOnly.map((set) => (
-                  <SelectItem key={set.id} value={set.id.toString()}>{set.name}</SelectItem>
+                  <SelectItem key={set.id} value={set.id.toString()}>{set.title}</SelectItem>
                 ))
               ) : (
                 <SelectItem value="no-sets" disabled>No card sets available</SelectItem>
@@ -239,7 +239,7 @@ export default function EditCardSets({ combinedSets, setCardSets, setNotificatio
             cardSetsOnly.map((set) => (
               <Card key={set.id} className="bg-white/50">
                 <CardContent className="p-4">
-                  <h3 className="text-lg font-semibold text-purple-700">{set.name}</h3>
+                  <h3 className="text-lg font-semibold text-purple-700">{set.title}</h3>
                   <p className="text-sm text-gray-600 mt-1">{set.description}</p>
                   <p className="text-sm text-gray-600 mt-1">
                     Cards: {set.cards.length}

@@ -15,9 +15,9 @@ interface Flashcard {
   image: string | null;
 }
 
-interface CardSet {
+export interface CardSet {
   id: number;
-  name: string;
+  title: string;
   description: string;
   cards: Flashcard[];
 }
@@ -67,9 +67,9 @@ export default function CreateCards() {
       case 'edit':
         return (
           <EditCardSets
-          combinedSets={combinedSets}
-          setCardSets={setCardSets}
-          setNotification={setNotification}
+            combinedSets={combinedSets}
+            setCardSets={setCardSets}
+            setNotification={setNotification}
           />
         );
       case 'test':
@@ -87,9 +87,9 @@ export default function CreateCards() {
       <div className="flex-1 p-8 overflow-auto">
         <h1 className="text-4xl font-bold mb-8 text-center text-cyan-800">
           {currentPage === 'create' ? 'Create Card Set' :
-           currentPage === 'edit' ? 'Edit Card Sets' :
-           currentPage === 'test' ? 'Test Create' :
-           currentPage === 'ai' ? 'AI Create' : ''}
+            currentPage === 'edit' ? 'Edit Card Sets' :
+              currentPage === 'test' ? 'Test Create' :
+                currentPage === 'ai' ? 'AI Create' : ''}
         </h1>
         {notification && (
           <Alert variant={notification.type === 'success' ? 'default' : 'destructive'} className="mb-4">
