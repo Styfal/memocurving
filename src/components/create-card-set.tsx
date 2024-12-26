@@ -27,7 +27,7 @@ const FlashcardSchema = z.object({
   image: z.string().nullable()
 })
 
-const CardSetSchema = z.object({
+export const CardSetSchema = z.object({
   id: z.number(),
   title: z.string().min(1).max(MAX_WORD_COUNT.setName),
   description: z.string().max(MAX_WORD_COUNT.setDescription),
@@ -38,7 +38,7 @@ type Flashcard = z.infer<typeof FlashcardSchema>
 type CardSet = z.infer<typeof CardSetSchema>
 
 interface CreateCardSetProps {
-  setCardSets: React.Dispatch<React.SetStateAction<(CardSet)[]>>
+  setCardSets: React.Dispatch<React.SetStateAction<CardSet[]>>
   setNotification: (notification: { type: 'success' | 'error', message: string } | null) => void
 }
 

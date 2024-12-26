@@ -49,7 +49,8 @@ export default function Navbar() {
           { name: 'Profile', href: '/profile' },
           { name: 'Settings', href: '/settings'},
           { name: 'Cards', href: '/cards' },
-          { name: 'Create', href: '/create' },
+          { name: 'Test', href: '/tests'},
+          { name: 'Create', href: '/create' }
         ]
       : []
     )
