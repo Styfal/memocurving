@@ -1,19 +1,30 @@
-"use client"
+"use client";
 
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, ChevronRight, Repeat, Plus, Check, Home, RefreshCw } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Repeat,
+  Plus,
+  Check,
+  Home,
+  RefreshCw,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { NextPage } from 'next';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from "@/lib/firebase";
-
-// Need to setup backend stuff here 
-// 2. Allow users to save there cards
-// 3. Change the text in lines 21-23 so that it incorporates the questions and answers the user has created in the createcards page
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { NextPage } from "next";
+import { doc, getDoc } from "firebase/firestore";
+import { db, auth } from "@/lib/firebase"; // Import auth from firebase
+import { User } from "firebase/auth"; // Import the User type
 
 type Flashcard = {
   question: string;
@@ -27,48 +38,70 @@ type FlashcardPageProps = {
 };
 
 const MemoFlashcard: NextPage<FlashcardPageProps> = ({ params }) => {
+  // Flashcards state and navigation
   const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
   const [currentCard, setCurrentCard] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // State for adding a new flashcard
   const [newQuestion, setNewQuestion] = useState("");
   const [newAnswer, setNewAnswer] = useState("");
+
+  // State for the completion celebration
   const [showCelebration, setShowCelebration] = useState(false);
   const [startTime, setStartTime] = useState<Date | null>(null);
   const [endTime, setEndTime] = useState<Date | null>(null);
   const [isCompleted, setIsCompleted] = useState(false);
 
+  // States for test metadata (title and description)
+  const [testTitle, setTestTitle] = useState("");
+  const [testDescription, setTestDescription] = useState("");
+  const [showSaveDialog, setShowSaveDialog] = useState(false);
+
+  // State to hold the current authenticated user
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+
+  // Listen for authentication state changes
   useEffect(() => {
-    const fetchFlashcardSet = async () => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      setCurrentUser(user);
+    });
+
+    // Cleanup subscription on unmount
+    return () => unsubscribe();
+  }, []);
+
+  // Fetch flashcards from Firestore using the test id
+  useEffect(() => {
+    const fetchTestSet = async () => {
       if (!params.id) return;
 
       try {
         setIsLoading(true);
-        const docRef = doc(db, 'cardSets', params.id);
+        const docRef = doc(db, "tests", params.id); // Fetch from 'tests' collection
         const docSnap = await getDoc(docRef);
 
         if (docSnap.exists()) {
           const data = docSnap.data();
-          // Directly use the 'cards' field from the document
-          const fetchedCards = data.cards || [];
-          
-          setFlashcards(fetchedCards);
+          // Assuming the test document contains a 'questions' field with flashcards
+          const fetchedTests = data.questions || [];
+          setFlashcards(fetchedTests);
           setStartTime(new Date());
         } else {
-          throw new Error('No such document');
+          throw new Error("No such test found");
         }
       } catch (err) {
-        console.error('Error fetching flashcard set:', err);
-        setError('Failed to load flashcards');
+        console.error("Error fetching test set:", err);
+        setError("Failed to load tests");
         setFlashcards([]);
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchFlashcardSet();
+    fetchTestSet();
   }, [params.id]);
 
   useEffect(() => {
@@ -77,6 +110,7 @@ const MemoFlashcard: NextPage<FlashcardPageProps> = ({ params }) => {
     }
   }, [currentCard, startTime, flashcards]);
 
+  // Navigation functions
   const nextCard = () => {
     if (currentCard < flashcards.length - 1) {
       setCurrentCard((prev) => prev + 1);
@@ -91,6 +125,7 @@ const MemoFlashcard: NextPage<FlashcardPageProps> = ({ params }) => {
     }
   };
 
+  // Add a new flashcard to the current set
   const addCard = () => {
     if (newQuestion && newAnswer) {
       setFlashcards([...flashcards, { question: newQuestion, answer: newAnswer }]);
@@ -99,6 +134,7 @@ const MemoFlashcard: NextPage<FlashcardPageProps> = ({ params }) => {
     }
   };
 
+  // When the last card is flipped, mark the test as completed
   const handleCheckClick = () => {
     if (currentCard === flashcards.length - 1 && isFlipped && !isCompleted) {
       setEndTime(new Date());
@@ -116,6 +152,44 @@ const MemoFlashcard: NextPage<FlashcardPageProps> = ({ params }) => {
     setEndTime(null);
   };
 
+  // Save test to Firestore via the API route
+  const saveTest = async () => {
+    try {
+      const testData = {
+        title: testTitle,
+        description: testDescription,
+        // Ensure we are sending an array of strings as expected
+        questions: flashcards.map((card) => `${card.question} - ${card.answer}`),
+        createdAt: new Date().toISOString(),
+        userId: currentUser ? currentUser.uid : "unknown", // Uses the currentUser from auth
+      };
+
+      console.log("Sending test data:", testData);
+
+      const response = await fetch("/api/tests", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(testData),
+      });
+
+      console.log("Response status:", response.status);
+
+      const result = await response.json();
+      console.log("Response data:", result);
+
+      if (result.success) {
+        console.log("Test saved with ID:", result.data.id);
+        // Optionally, you might want to clear state or give user feedback here
+      } else {
+        console.error("Error saving test:", result.error);
+      }
+    } catch (error) {
+      console.error("Error in saveTest function:", error);
+    }
+  };
+
   // Loading and error states
   if (isLoading) {
     return <div>Loading flashcards...</div>;
@@ -130,18 +204,20 @@ const MemoFlashcard: NextPage<FlashcardPageProps> = ({ params }) => {
   }
 
   const progress = ((currentCard + 1) / flashcards.length) * 100;
-
   const isLastCard = currentCard === flashcards.length - 1;
   const canCheck = isLastCard && isFlipped && !isCompleted;
-
-  const completionTime = startTime && endTime
-    ? Math.floor((endTime.getTime() - startTime.getTime()) / 1000)
-    : 0;
+  const completionTime =
+    startTime && endTime
+      ? Math.floor((endTime.getTime() - startTime.getTime()) / 1000)
+      : 0;
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-white p-4">
       <div className="w-full max-w-md">
+        {/* Progress Bar */}
         <Progress value={progress} className="mb-4" />
+
+        {/* Flashcard display */}
         <div
           className="relative w-full aspect-[4/3] cursor-pointer"
           onClick={() => !isCompleted && setIsFlipped(!isFlipped)}
@@ -184,6 +260,7 @@ const MemoFlashcard: NextPage<FlashcardPageProps> = ({ params }) => {
           </motion.div>
         </div>
 
+        {/* Navigation Buttons */}
         <div className="flex justify-between mt-6">
           <Button
             variant="outline"
@@ -229,9 +306,13 @@ const MemoFlashcard: NextPage<FlashcardPageProps> = ({ params }) => {
           </Button>
         </div>
 
+        {/* Dialog to add a new flashcard */}
         <Dialog>
           <DialogTrigger asChild>
-            <Button className="w-full mt-4 bg-blue-500 hover:bg-blue-600 text-white" disabled={isCompleted}>
+            <Button
+              className="w-full mt-4 bg-blue-500 hover:bg-blue-600 text-white"
+              disabled={isCompleted}
+            >
               <Plus className="mr-2 h-4 w-4" /> Add New Card
             </Button>
           </DialogTrigger>
@@ -267,6 +348,56 @@ const MemoFlashcard: NextPage<FlashcardPageProps> = ({ params }) => {
           </DialogContent>
         </Dialog>
 
+        {/* Button and Dialog to save the entire test */}
+        <Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
+          <DialogTrigger asChild>
+            <Button
+              className="w-full mt-4 bg-green-500 hover:bg-green-600 text-white"
+              disabled={!isCompleted}
+            >
+              Save Test
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Save Test Details</DialogTitle>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <label htmlFor="testTitle" className="text-right">
+                  Title
+                </label>
+                <Input
+                  id="testTitle"
+                  value={testTitle}
+                  onChange={(e) => setTestTitle(e.target.value)}
+                  className="col-span-3"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <label htmlFor="testDescription" className="text-right">
+                  Description
+                </label>
+                <Input
+                  id="testDescription"
+                  value={testDescription}
+                  onChange={(e) => setTestDescription(e.target.value)}
+                  className="col-span-3"
+                />
+              </div>
+            </div>
+            <Button
+              onClick={() => {
+                saveTest();
+                setShowSaveDialog(false);
+              }}
+            >
+              Save Test
+            </Button>
+          </DialogContent>
+        </Dialog>
+
+        {/* Celebration Overlay */}
         <AnimatePresence>
           {showCelebration && (
             <motion.div
@@ -281,10 +412,16 @@ const MemoFlashcard: NextPage<FlashcardPageProps> = ({ params }) => {
                   You completed the flashcard in {completionTime} seconds!
                 </p>
                 <div className="flex justify-center space-x-4">
-                  <Button onClick={resetFlashcards} className="bg-blue-500 hover:bg-blue-600 text-white">
+                  <Button
+                    onClick={resetFlashcards}
+                    className="bg-blue-500 hover:bg-blue-600 text-white"
+                  >
                     <RefreshCw className="mr-2 h-4 w-4" /> Redo
                   </Button>
-                  <Button onClick={() => window.location.href = '/'} className="bg-green-500 hover:bg-green-600 text-white">
+                  <Button
+                    onClick={() => (window.location.href = "/")}
+                    className="bg-green-500 hover:bg-green-600 text-white"
+                  >
                     <Home className="mr-2 h-4 w-4" /> Home
                   </Button>
                 </div>
@@ -295,6 +432,6 @@ const MemoFlashcard: NextPage<FlashcardPageProps> = ({ params }) => {
       </div>
     </div>
   );
-}
+};
 
 export default MemoFlashcard;

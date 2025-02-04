@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import Image from 'next/image'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -10,6 +10,10 @@ import { Textarea } from "@/components/ui/textarea"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { PlusIcon, SaveIcon, ImageIcon, TrashIcon } from 'lucide-react'
 import { z } from 'zod'
+
+// Import Firebase auth and the User type
+import { auth } from '@/lib/firebase'
+import { User } from 'firebase/auth'
 
 const MAX_QUESTIONS = 50
 const MAX_WORD_COUNT = {
@@ -49,6 +53,18 @@ export default function TestCreate({ setTestSets, setNotification }: TestCreateP
   const [testSetName, setTestSetName] = useState('')
   const [testSetDescription, setTestSetDescription] = useState('')
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
+
+  // Add a state for the current user
+  const [currentUser, setCurrentUser] = useState<User | null>(null)
+
+  // Subscribe to auth state changes
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      setCurrentUser(user)
+    })
+    return () => unsubscribe()
+  }, [])
+
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const addTestQuestion = () => {
@@ -76,29 +92,50 @@ export default function TestCreate({ setTestSets, setNotification }: TestCreateP
     setTestQuestions(testQuestions.filter(q => q.id !== id))
   }
 
-  
-
   const removeImage = (id: number) => {
     setTestQuestions(testQuestions.map(question =>
       question.id === id ? { ...question, image: null } : question
     ))
   }
 
-  const saveTestSet = () => {
+  const saveTestSet = async () => {
     try {
       const newTestSet: TestSet = {
         id: Date.now(),
         name: testSetName,
         description: testSetDescription,
         questions: testQuestions
+      };
+      const validatedSet = TestSetSchema.parse(newTestSet);
+      
+      // Convert frontend structure to backend-compatible format
+      const requestData = {
+        title: validatedSet.name,
+        description: validatedSet.description,
+        questions: validatedSet.questions.map(q => q.question),
+        createdAt: new Date().toISOString(),
+        userId: currentUser ? currentUser.uid : "unknown", // Now currentUser is defined!
+      };
+      
+      // Send to the backend API
+      const response = await fetch('/api/tests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestData),
+      });
+  
+      const result = await response.json();
+  
+      if (response.ok) {
+        setNotification({ type: 'success', message: `Test set "${validatedSet.name}" saved successfully!` });
+        setTestSets(prev => [...prev, validatedSet]); // Keep local state update
+        setTestQuestions([]);
+        setTestSetName('');
+        setTestSetDescription('');
+        setErrors({});
+      } else {
+        setNotification({ type: 'error', message: `Error: ${result.error}` });
       }
-      const validatedSet = TestSetSchema.parse(newTestSet)
-      setTestSets(prev => [...prev, validatedSet])
-      setNotification({ type: 'success', message: `Test set "${validatedSet.name}" saved successfully!` })
-      setTestQuestions([])
-      setTestSetName('')
-      setTestSetDescription('')
-      setErrors({})
     } catch (error) {
       if (error instanceof z.ZodError) {
         const newErrors: { [key: string]: string } = {}
@@ -109,12 +146,14 @@ export default function TestCreate({ setTestSets, setNotification }: TestCreateP
         setNotification({ type: 'error', message: "Please correct the errors in the form." })
       }
     }
-  }
-
+  };
+  
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="test-set-name" className="text-lg text-cyan-700">Test Set Name ({MAX_WORD_COUNT.setName} words max)</Label>
+        <Label htmlFor="test-set-name" className="text-lg text-cyan-700">
+          Test Set Name ({MAX_WORD_COUNT.setName} words max)
+        </Label>
         <Input
           id="test-set-name"
           value={testSetName}
@@ -125,7 +164,9 @@ export default function TestCreate({ setTestSets, setNotification }: TestCreateP
         {errors['name'] && <p className="text-red-500 text-sm">{errors['name']}</p>}
       </div>
       <div className="space-y-2">
-        <Label htmlFor="test-set-description" className="text-lg text-cyan-700">Test Set Description ({MAX_WORD_COUNT.setDescription} words max)</Label>
+        <Label htmlFor="test-set-description" className="text-lg text-cyan-700">
+          Test Set Description ({MAX_WORD_COUNT.setDescription} words max)
+        </Label>
         <Textarea
           id="test-set-description"
           value={testSetDescription}
@@ -139,7 +180,9 @@ export default function TestCreate({ setTestSets, setNotification }: TestCreateP
         <Card key={question.id} className="bg-white/50">
           <CardContent className="p-4 space-y-4">
             <div>
-              <Label htmlFor={`test-question-${question.id}`} className="text-lg text-cyan-700">Question ({MAX_WORD_COUNT.question} words max)</Label>
+              <Label htmlFor={`test-question-${question.id}`} className="text-lg text-cyan-700">
+                Question ({MAX_WORD_COUNT.question} words max)
+              </Label>
               <Input
                 id={`test-question-${question.id}`}
                 value={question.question}
@@ -168,7 +211,9 @@ export default function TestCreate({ setTestSets, setNotification }: TestCreateP
             </div>
             {question.answerType === 'multiple' && (
               <div className="space-y-2">
-                <Label className="text-lg text-cyan-700">Options ({MAX_WORD_COUNT.option} words max each)</Label>
+                <Label className="text-lg text-cyan-700">
+                  Options ({MAX_WORD_COUNT.option} words max each)
+                </Label>
                 {question.options?.map((option, optionIndex) => (
                   <Input
                     key={optionIndex}
@@ -186,7 +231,9 @@ export default function TestCreate({ setTestSets, setNotification }: TestCreateP
               </div>
             )}
             <div>
-              <Label htmlFor={`correct-answer-${question.id}`} className="text-lg text-cyan-700">Correct Answer ({MAX_WORD_COUNT.answer} words max)</Label>
+              <Label htmlFor={`correct-answer-${question.id}`} className="text-lg text-cyan-700">
+                Correct Answer ({MAX_WORD_COUNT.answer} words max)
+              </Label>
               <Input
                 id={`correct-answer-${question.id}`}
                 value={question.correctAnswer}
@@ -196,7 +243,6 @@ export default function TestCreate({ setTestSets, setNotification }: TestCreateP
               />
               {errors[`questions.${index}.correctAnswer`] && <p className="text-red-500 text-sm">{errors[`questions.${index}.correctAnswer`]}</p>}
             </div>
-          
             <Button variant="destructive" size="sm" onClick={() => removeTestQuestion(question.id)}>
               <TrashIcon className="w-4 h-4 mr-1" />
               Delete Question
@@ -204,15 +250,14 @@ export default function TestCreate({ setTestSets, setNotification }: TestCreateP
           </CardContent>
         </Card>
       ))}
-     <Button variant="secondary" onClick={addTestQuestion} disabled={testQuestions.length >= MAX_QUESTIONS} className="mr-2">
-  <PlusIcon className="w-4 h-4 mr-2" />
-  Add Question
-</Button>
-<Button variant="default" onClick={saveTestSet} disabled={!testSetName || !testQuestions.length} className="mr-2">
-  <SaveIcon className="w-4 h-4 mr-2" />
-  Save Test Set
-</Button>
-
+      <Button variant="secondary" onClick={addTestQuestion} disabled={testQuestions.length >= MAX_QUESTIONS} className="mr-2">
+        <PlusIcon className="w-4 h-4 mr-2" />
+        Add Question
+      </Button>
+      <Button variant="default" onClick={saveTestSet} disabled={!testSetName || !testQuestions.length} className="mr-2">
+        <SaveIcon className="w-4 h-4 mr-2" />
+        Save Test Set
+      </Button>
     </div>
   )
 }
