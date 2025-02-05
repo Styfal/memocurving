@@ -38,6 +38,10 @@ type FlashcardPageProps = {
 };
 
 const MemoFlashcard: NextPage<FlashcardPageProps> = ({ params }) => {
+  // State for test metadata fetched from Firestore
+  const [fetchedTitle, setFetchedTitle] = useState("");
+  const [fetchedDescription, setFetchedDescription] = useState("");
+
   // Flashcards state and navigation
   const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
   const [currentCard, setCurrentCard] = useState(0);
@@ -45,7 +49,7 @@ const MemoFlashcard: NextPage<FlashcardPageProps> = ({ params }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // State for adding a new flashcard
+  // States for new flashcard input (if needed)
   const [newQuestion, setNewQuestion] = useState("");
   const [newAnswer, setNewAnswer] = useState("");
 
@@ -55,7 +59,7 @@ const MemoFlashcard: NextPage<FlashcardPageProps> = ({ params }) => {
   const [endTime, setEndTime] = useState<Date | null>(null);
   const [isCompleted, setIsCompleted] = useState(false);
 
-  // States for test metadata (title and description)
+  // States for test metadata (for saving changes, if needed)
   const [testTitle, setTestTitle] = useState("");
   const [testDescription, setTestDescription] = useState("");
   const [showSaveDialog, setShowSaveDialog] = useState(false);
@@ -68,42 +72,44 @@ const MemoFlashcard: NextPage<FlashcardPageProps> = ({ params }) => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
       setCurrentUser(user);
     });
-
-    // Cleanup subscription on unmount
     return () => unsubscribe();
   }, []);
 
-  // Fetch flashcards from Firestore using the test id
+  // Fetch test data from Firestore using the test id
   useEffect(() => {
     const fetchTestSet = async () => {
       if (!params.id) return;
-
       try {
         setIsLoading(true);
         const docRef = doc(db, "tests", params.id); // Fetch from 'tests' collection
         const docSnap = await getDoc(docRef);
-
         if (docSnap.exists()) {
           const data = docSnap.data();
-          // Assuming the test document contains a 'questions' field with flashcards
-          const fetchedTests = data.questions || [];
-          setFlashcards(fetchedTests);
+          // Store metadata for display
+          setFetchedTitle(data.title || "");
+          setFetchedDescription(data.description || "");
+          // Set flashcards (assumed to be stored in the "questions" field)
+          const fetchedFlashcards = data.questions || [];
+          setFlashcards(fetchedFlashcards);
+          // Optionally, if you want to populate the saving fields with fetched data:
+          setTestTitle(data.title || "");
+          setTestDescription(data.description || "");
           setStartTime(new Date());
         } else {
           throw new Error("No such test found");
         }
       } catch (err) {
         console.error("Error fetching test set:", err);
-        setError("Failed to load tests");
+        setError("Failed to load test");
         setFlashcards([]);
       } finally {
         setIsLoading(false);
       }
     };
-
     fetchTestSet();
   }, [params.id]);
 
+  // Ensure startTime is set
   useEffect(() => {
     if (currentCard === 0 && !startTime && flashcards.length > 0) {
       setStartTime(new Date());
@@ -152,7 +158,7 @@ const MemoFlashcard: NextPage<FlashcardPageProps> = ({ params }) => {
     setEndTime(null);
   };
 
-  // Save test to Firestore via the API route
+  // Save test to Firestore via the API route (if editing or saving changes)
   const saveTest = async () => {
     try {
       const testData = {
@@ -161,7 +167,7 @@ const MemoFlashcard: NextPage<FlashcardPageProps> = ({ params }) => {
         // Ensure we are sending an array of strings as expected
         questions: flashcards.map((card) => `${card.question} - ${card.answer}`),
         createdAt: new Date().toISOString(),
-        userId: currentUser ? currentUser.uid : "unknown", // Uses the currentUser from auth
+        userId: currentUser ? currentUser.uid : "unknown",
       };
 
       console.log("Sending test data:", testData);
@@ -181,7 +187,7 @@ const MemoFlashcard: NextPage<FlashcardPageProps> = ({ params }) => {
 
       if (result.success) {
         console.log("Test saved with ID:", result.data.id);
-        // Optionally, you might want to clear state or give user feedback here
+        // Optionally, clear state or give user feedback here
       } else {
         console.error("Error saving test:", result.error);
       }
@@ -192,7 +198,7 @@ const MemoFlashcard: NextPage<FlashcardPageProps> = ({ params }) => {
 
   // Loading and error states
   if (isLoading) {
-    return <div>Loading flashcards...</div>;
+    return <div>Loading test data...</div>;
   }
 
   if (error) {
@@ -200,7 +206,7 @@ const MemoFlashcard: NextPage<FlashcardPageProps> = ({ params }) => {
   }
 
   if (flashcards.length === 0) {
-    return <div>No flashcards found for this set.</div>;
+    return <div>No flashcards found for this test.</div>;
   }
 
   const progress = ((currentCard + 1) / flashcards.length) * 100;
@@ -214,6 +220,12 @@ const MemoFlashcard: NextPage<FlashcardPageProps> = ({ params }) => {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-white p-4">
       <div className="w-full max-w-md">
+        {/* Display test metadata */}
+        <header className="mb-4">
+          <h1 className="text-3xl font-bold">{fetchedTitle}</h1>
+          <p className="text-lg text-muted-foreground">{fetchedDescription}</p>
+        </header>
+
         {/* Progress Bar */}
         <Progress value={progress} className="mb-4" />
 

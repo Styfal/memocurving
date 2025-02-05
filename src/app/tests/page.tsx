@@ -1,18 +1,14 @@
-"use client"
+"use client";
 
-import { EnhancedSettingsPageComponent } from "@/components/enhanced-settings-page"
-import MaxWidthWrapper from "@/components/MaxWidthWrapper"
-import { testcourse } from "@/components/testcourse"
+import MaxWidthWrapper from "@/components/MaxWidthWrapper";
+import TestCourse from "@/components/testcourse"; // Ensure the exported component is named appropriately
 
-const Page= () => {
+const Page = () => {
+  return (
+    <MaxWidthWrapper>
+      <TestCourse />
+    </MaxWidthWrapper>
+  );
+};
 
-   return( 
-testcourse
-
-)
-    
-
- 
-}
-
-export default Page
+export default Page;
