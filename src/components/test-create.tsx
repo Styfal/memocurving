@@ -108,16 +108,22 @@ export default function TestCreate({ setTestSets, setNotification }: TestCreateP
       };
       const validatedSet = TestSetSchema.parse(newTestSet);
       
-      // Convert frontend structure to backend-compatible format
+      // Convert the frontend structure to the backend-compatible format.
+      // Now each question is an object with question, correctAnswer, and (optionally) options.
       const requestData = {
         title: validatedSet.name,
         description: validatedSet.description,
-        questions: validatedSet.questions.map(q => q.question),
+        questions: validatedSet.questions.map(q => ({
+          question: q.question,
+          correctAnswer: q.correctAnswer,
+          // Only send options if the answerType is multiple choice.
+          ...(q.answerType === 'multiple' && { options: q.options }),
+        })),
         createdAt: new Date().toISOString(),
-        userId: currentUser ? currentUser.uid : "unknown", // Now currentUser is defined!
+        userId: currentUser ? currentUser.uid : "unknown",
       };
       
-      // Send to the backend API
+      // Send to the backend API.
       const response = await fetch('/api/tests', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -128,7 +134,7 @@ export default function TestCreate({ setTestSets, setNotification }: TestCreateP
   
       if (response.ok) {
         setNotification({ type: 'success', message: `Test set "${validatedSet.name}" saved successfully!` });
-        setTestSets(prev => [...prev, validatedSet]); // Keep local state update
+        setTestSets(prev => [...prev, validatedSet]); // Update local state.
         setTestQuestions([]);
         setTestSetName('');
         setTestSetDescription('');
