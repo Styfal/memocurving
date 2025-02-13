@@ -1,3 +1,5 @@
+
+
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
@@ -14,30 +16,34 @@ import { User } from 'firebase/auth'
 
 const MAX_CARDS = 20
 const MAX_WORD_COUNT = {
-  // Although setName is 10 in the config, we now enforce it as 10 words via a refinement.
   setDescription: 50,
-  question: 100,
-  answer: 500
+  question: 20,
+  answer: 40,
 }
 
 const FlashcardSchema = z.object({
   id: z.number(),
-  question: z.string().min(1).max(MAX_WORD_COUNT.question),
-  answer: z.string().min(1).max(MAX_WORD_COUNT.answer),
+  question: z.string().min(1).refine(
+    (val) => val.split(/\s+/).filter(Boolean).length <= MAX_WORD_COUNT.question,
+    { message: `Question must be at most ${MAX_WORD_COUNT.question} words.` }
+  ),
+  answer: z.string().min(1).refine(
+    (val) => val.split(/\s+/).filter(Boolean).length <= MAX_WORD_COUNT.answer,
+    { message: `Answer must be at most ${MAX_WORD_COUNT.answer} words.` }
+  ),
   image: z.string().nullable()
 })
 
-// Update the title schema: instead of a character limit, we enforce a 10‐word limit.
 export const CardSetSchema = z.object({
   id: z.number(),
-  title: z
-    .string()
-    .min(1)
-    .refine(
-      (val) => val.split(/\s+/).filter(Boolean).length <= 10,
-      { message: "Title must be at most 10 words." }
-    ),
-  description: z.string().max(MAX_WORD_COUNT.setDescription),
+  title: z.string().min(1).refine(
+    (val) => val.split(/\s+/).filter(Boolean).length <= 10,
+    { message: "Title must be at most 10 words." }
+  ),
+  description: z.string().min(0).refine(
+    (val) => val.split(/\s+/).filter(Boolean).length <= MAX_WORD_COUNT.setDescription,
+    { message: `Description must be at most ${MAX_WORD_COUNT.setDescription} words.` }
+  ),
   cards: z.array(FlashcardSchema).min(1).max(MAX_CARDS)
 })
 
@@ -47,9 +53,10 @@ type CardSet = z.infer<typeof CardSetSchema>
 interface CreateCardSetProps {
   setCardSets: React.Dispatch<React.SetStateAction<CardSet[]>>
   setNotification: (notification: { type: 'success' | 'error', message: string } | null) => void
+  existingCardSetsCount?: number
 }
 
-export default function CreateCardSet({ setCardSets, setNotification }: CreateCardSetProps) {
+export default function CreateCardSet({ setCardSets, setNotification, existingCardSetsCount = 0 }: CreateCardSetProps) {
   const [flashcards, setFlashcards] = useState<Flashcard[]>([{ id: 1, question: '', answer: '', image: null }])
   const [setName, setSetName] = useState('')
   const [setDescription, setSetDescription] = useState('')
@@ -57,7 +64,6 @@ export default function CreateCardSet({ setCardSets, setNotification }: CreateCa
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // Listen for authentication state changes
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
       setCurrentUser(user)
@@ -79,29 +85,12 @@ export default function CreateCardSet({ setCardSets, setNotification }: CreateCa
     ))
   }
 
-  // (Optional image functionality commented out)
-  /*
-  const handleImageUpload = (id: number, event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (file) {
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        setFlashcards(flashcards.map(card => 
-          card.id === id ? { ...card, image: reader.result as string } : card
-        ))
-      }
-      reader.readAsDataURL(file)
-    }
-  }
-  
-  const removeImage = (id: number) => {
-    setFlashcards(flashcards.map(card => 
-      card.id === id ? { ...card, image: null } : card
-    ))
-  }
-  */
-
   const saveFlashcards = async () => {
+    // Check if user has reached maximum allowed flashcard sets (20)
+    if (existingCardSetsCount >= 20) {
+      setNotification({ type: 'error', message: 'Maximum of 20 flashcard sets allowed.' })
+      return;
+    }
     if (!currentUser) {
       setNotification({ type: 'error', message: 'You must be logged in to save card sets.' })
       return
@@ -188,7 +177,7 @@ export default function CreateCardSet({ setCardSets, setNotification }: CreateCa
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="set-description" className="text-lg text-cyan-700">Set Description ({MAX_WORD_COUNT.setDescription} words max)</Label>
+        <Label htmlFor="set-description" className="text-lg text-cyan-700">Set Description (50 words max)</Label>
         <Textarea
           id="set-description"
           value={setDescription}
@@ -204,7 +193,7 @@ export default function CreateCardSet({ setCardSets, setNotification }: CreateCa
           <CardContent className="p-4 grid grid-cols-2 gap-4">
             <div className="space-y-4">
               <div>
-                <Label htmlFor={`question-${card.id}`} className="text-lg text-cyan-700">Question ({MAX_WORD_COUNT.question} words max)</Label>
+                <Label htmlFor={`question-${card.id}`} className="text-lg text-cyan-700">Question (20 words max)</Label>
                 <Input
                   id={`question-${card.id}`}
                   value={card.question}
@@ -214,14 +203,11 @@ export default function CreateCardSet({ setCardSets, setNotification }: CreateCa
                 />
                 {errors[`cards.${index}.question`] && <p className="text-red-500 text-sm">{errors[`cards.${index}.question`]}</p>}
               </div>
-              {/*
-              // Optional image functionality (commented out)
-              */}
             </div>
 
             <div className="space-y-4">
               <div>
-                <Label htmlFor={`answer-${card.id}`} className="text-lg text-cyan-700">Answer ({MAX_WORD_COUNT.answer} words max)</Label>
+                <Label htmlFor={`answer-${card.id}`} className="text-lg text-cyan-700">Answer (40 words max)</Label>
                 <Input
                   id={`answer-${card.id}`}
                   value={card.answer}

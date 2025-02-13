@@ -1,19 +1,51 @@
+
+
+
 import { db } from '@/lib/firebase';
 import { collection, addDoc, deleteDoc, doc, getDocs } from 'firebase/firestore';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 
+const TestQuestionSchema = z.object({
+  question: z
+    .string()
+    .min(1)
+    .refine(
+      (val) => val.split(/\s+/).filter(Boolean).length <= 30,
+      { message: "Question must be at most 30 words." }
+    ),
+  correctAnswer: z
+    .string()
+    .min(1)
+    .refine(
+      (val) => val.split(/\s+/).filter(Boolean).length <= 50,
+      { message: "Answer must be at most 50 words." }
+    ),
+  options: z.array(z.string()).optional(),
+}).refine(
+  (q) => !q.options || (new Set(q.options).size === q.options.length),
+  { message: "Duplicate options are not allowed." }
+).refine(
+  (q) => !q.options || q.options.includes(q.correctAnswer),
+  { message: "Correct answer must be one of the options." }
+);
+
 const TestSchema = z.object({
-  title: z.string(),
-  description: z.string(),
-  // Each question is an object with question text, correctAnswer, and optional options.
-  questions: z.array(
-    z.object({
-      question: z.string(),
-      correctAnswer: z.string(),
-      options: z.array(z.string()).optional(),
-    })
-  ),
+  title: z
+    .string()
+    .min(1)
+    .refine(
+      (val) => val.split(/\s+/).filter(Boolean).length <= 10,
+      { message: "Title must be at most 10 words." }
+    ),
+  description: z
+    .string()
+    .min(0)
+    .refine(
+      (val) => val.split(/\s+/).filter(Boolean).length <= 50,
+      { message: "Description must be at most 50 words." }
+    ),
+  questions: z.array(TestQuestionSchema).max(20),
   createdAt: z.string(),
   userId: z.string(),
 });

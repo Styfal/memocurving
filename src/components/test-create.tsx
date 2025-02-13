@@ -1,4 +1,5 @@
 
+
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -14,64 +15,88 @@ import { auth } from '@/lib/firebase'
 import { User } from 'firebase/auth'
 
 // Maximum allowed questions and word count limits
-const MAX_QUESTIONS = 50
+const MAX_QUESTIONS = 20
 const MAX_WORD_COUNT = {
-  // For test set names, we will enforce a 10-word limit using a custom refinement.
   setName: 10,
   setDescription: 50,
-  question: 100,
-  answer: 500,
-  option: 100,
+  question: 30,
+  answer: 50,
+  option: 50,
 }
 
-// ===== Free Mode Schemas (user can choose multiple or short answer) =====
 const FreeTestQuestionSchema = z.object({
   id: z.number(),
-  question: z.string().min(1).max(MAX_WORD_COUNT.question),
+  question: z.string().min(1).refine(
+    val => val.split(/\s+/).filter(Boolean).length <= MAX_WORD_COUNT.question,
+    { message: `Question must be at most ${MAX_WORD_COUNT.question} words.` }
+  ),
   answerType: z.enum(['multiple', 'short']),
-  options: z.array(z.string().max(MAX_WORD_COUNT.option)).optional(),
-  correctAnswer: z.string().min(1).max(MAX_WORD_COUNT.answer),
+  options: z.array(
+    z.string().min(1).refine(
+      val => val.split(/\s+/).filter(Boolean).length <= MAX_WORD_COUNT.option,
+      { message: `Option must be at most ${MAX_WORD_COUNT.option} words.` }
+    )
+  ).optional(),
+  correctAnswer: z.string().min(1).refine(
+    val => val.split(/\s+/).filter(Boolean).length <= MAX_WORD_COUNT.answer,
+    { message: `Answer must be at most ${MAX_WORD_COUNT.answer} words.` }
+  ),
   image: z.string().nullable(),
 })
+.refine(
+  (data) => data.answerType !== 'multiple' || (data.options && new Set(data.options).size === data.options.length),
+  { message: "Duplicate options are not allowed." }
+)
+.refine(
+  (data) => data.answerType !== 'multiple' || (data.options && data.options.includes(data.correctAnswer)),
+  { message: "Correct answer must be one of the options." }
+);
+
+const FlashcardTestQuestionSchema = z.object({
+  id: z.number(),
+  question: z.string().min(1).refine(
+    val => val.split(/\s+/).filter(Boolean).length <= MAX_WORD_COUNT.question,
+    { message: `Question must be at most ${MAX_WORD_COUNT.question} words.` }
+  ),
+  answerType: z.literal('short'),
+  correctAnswer: z.string().min(1).refine(
+    val => val.split(/\s+/).filter(Boolean).length <= MAX_WORD_COUNT.answer,
+    { message: `Answer must be at most ${MAX_WORD_COUNT.answer} words.` }
+  ),
+  image: z.string().nullable(),
+});
 
 const FreeTestSetSchema = z.object({
   id: z.number(),
   name: z.string().min(1).refine(
-    (val) => val.split(/\s+/).filter(Boolean).length <= 10,
-    { message: "Test Set name must be at most 10 words." }
+    val => val.split(/\s+/).filter(Boolean).length <= MAX_WORD_COUNT.setName,
+    { message: `Test Set name must be at most ${MAX_WORD_COUNT.setName} words.` }
   ),
-  description: z.string().max(MAX_WORD_COUNT.setDescription),
+  description: z.string().min(0).refine(
+    val => val.split(/\s+/).filter(Boolean).length <= MAX_WORD_COUNT.setDescription,
+    { message: `Test Set description must be at most ${MAX_WORD_COUNT.setDescription} words.` }
+  ),
   questions: z.array(FreeTestQuestionSchema).min(1).max(MAX_QUESTIONS),
-})
-
-// ===== Flashcard Mode Schemas (forced short answer) =====
-const FlashcardTestQuestionSchema = z.object({
-  id: z.number(),
-  question: z.string().min(1).max(MAX_WORD_COUNT.question),
-  answerType: z.literal('short'),
-  correctAnswer: z.string().min(1).max(MAX_WORD_COUNT.answer),
-  image: z.string().nullable(),
-})
+});
 
 const FlashcardTestSetSchema = z.object({
   id: z.number(),
   name: z.string().min(1).refine(
-    (val) => val.split(/\s+/).filter(Boolean).length <= 10,
-    { message: "Test Set name must be at most 10 words." }
+    val => val.split(/\s+/).filter(Boolean).length <= MAX_WORD_COUNT.setName,
+    { message: `Test Set name must be at most ${MAX_WORD_COUNT.setName} words.` }
   ),
-  description: z.string().max(MAX_WORD_COUNT.setDescription),
+  description: z.string().min(0).refine(
+    val => val.split(/\s+/).filter(Boolean).length <= MAX_WORD_COUNT.setDescription,
+    { message: `Test Set description must be at most ${MAX_WORD_COUNT.setDescription} words.` }
+  ),
   questions: z.array(FlashcardTestQuestionSchema).min(1).max(MAX_QUESTIONS),
-})
+});
 
-// ===== Types =====
 type FreeTestQuestion = z.infer<typeof FreeTestQuestionSchema>
 type FreeTestSet = z.infer<typeof FreeTestSetSchema>
 type FlashcardTestQuestion = z.infer<typeof FlashcardTestQuestionSchema>
 type FlashcardTestSet = z.infer<typeof FlashcardTestSetSchema>
 
-// ===== Flashcard Deck Types =====
-// When creating a test from flashcards, each flashcard’s question becomes the test question,
-// and its answer becomes the correct answer.
 interface Flashcard {
   id: number,
   question: string,
@@ -86,15 +111,14 @@ export interface FlashcardDeck {
   cards: Flashcard[]
 }
 
-// ===== Props for TestCreate =====
 interface TestCreateProps {
   setTestSets: React.Dispatch<React.SetStateAction<(FreeTestSet | FlashcardTestSet)[]>>
   setNotification: (notification: { type: 'success' | 'error', message: string } | null) => void
-  // If provided, the test is created from a flashcard deck (flashcard mode)
   flashcardDeck?: FlashcardDeck
+  existingTestSetsCount?: number
 }
 
-export default function TestCreate({ setTestSets, setNotification, flashcardDeck }: TestCreateProps) {
+export default function TestCreate({ setTestSets, setNotification, flashcardDeck, existingTestSetsCount = 0 }: TestCreateProps) {
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(user => setCurrentUser(user))
@@ -103,7 +127,6 @@ export default function TestCreate({ setTestSets, setNotification, flashcardDeck
 
   const isFlashcardMode = !!flashcardDeck
 
-  // If in flashcard mode, prefill test questions from the deck; otherwise start empty.
   const initialQuestions = isFlashcardMode
     ? flashcardDeck!.cards.map(card => ({
         id: card.id,
@@ -153,6 +176,11 @@ export default function TestCreate({ setTestSets, setNotification, flashcardDeck
   }
 
   const saveTestSet = async () => {
+    // Check if user has reached maximum allowed test sets (20)
+    if (existingTestSetsCount >= 20) {
+      setNotification({ type: 'error', message: 'Maximum of 20 test sets allowed.' })
+      return;
+    }
     try {
       if (isFlashcardMode) {
         const newTestSet: FlashcardTestSet = {
@@ -253,7 +281,7 @@ export default function TestCreate({ setTestSets, setNotification, flashcardDeck
       </div>
       <div className="space-y-2">
         <Label htmlFor="test-set-description" className="text-lg text-cyan-700">
-          Test Set Description ({MAX_WORD_COUNT.setDescription} words max)
+          Test Set Description (50 words max)
         </Label>
         <Textarea
           id="test-set-description"
@@ -268,7 +296,7 @@ export default function TestCreate({ setTestSets, setNotification, flashcardDeck
           <CardContent className="p-4 space-y-4">
             <div>
               <Label htmlFor={`test-question-${question.id}`} className="text-lg text-cyan-700">
-                Question ({MAX_WORD_COUNT.question} words max)
+                Question (30 words max)
               </Label>
               <Input
                 id={`test-question-${question.id}`}
@@ -300,7 +328,7 @@ export default function TestCreate({ setTestSets, setNotification, flashcardDeck
             {!isFlashcardMode && (question.answerType === 'multiple') && (
               <div className="space-y-2">
                 <Label className="text-lg text-cyan-700">
-                  Options ({MAX_WORD_COUNT.option} words max each)
+                  Options (50 words max each)
                 </Label>
                 {question.options?.map((option, optionIndex) => (
                   <Input
@@ -319,7 +347,7 @@ export default function TestCreate({ setTestSets, setNotification, flashcardDeck
             )}
             <div>
               <Label htmlFor={`correct-answer-${question.id}`} className="text-lg text-cyan-700">
-                Correct Answer ({MAX_WORD_COUNT.answer} words max)
+                Correct Answer (50 words max)
               </Label>
               <Input
                 id={`correct-answer-${question.id}`}
