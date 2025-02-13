@@ -1,7 +1,3 @@
-
-
-
-
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useAuthState } from "react-firebase-hooks/auth";
@@ -19,6 +15,14 @@ export function Courses() {
   const [testedDecks, setTestedDecks] = useState<string[]>([]);
   const router = useRouter();
 
+  // States for editing flashcards and deck details within a cardset:
+  const [editingCardset, setEditingCardset] = useState<any | null>(null);
+  const [editedTitle, setEditedTitle] = useState("");
+  const [editedDescription, setEditedDescription] = useState("");
+  const [editedCards, setEditedCards] = useState<any[]>([]);
+  // This state tracks which card rows are currently in “edit mode” (by index)
+  const [editingIndices, setEditingIndices] = useState<number[]>([]);
+
   // Fetch the cardsets created by the current user (using createdBy.uid)
   useEffect(() => {
     if (user) {
@@ -28,7 +32,7 @@ export function Courses() {
           where("createdBy.uid", "==", user.uid)
         );
         const querySnapshot = await getDocs(q);
-        const cardsets = querySnapshot.docs.map(doc => ({
+        const cardsets = querySnapshot.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
         }));
@@ -53,9 +57,9 @@ export function Courses() {
       });
       const result = await response.json();
       if (result.success) {
-        setUserCardsets(prev => prev.filter(cardset => cardset.id !== cardsetId));
+        setUserCardsets((prev) => prev.filter((cardset) => cardset.id !== cardsetId));
         // Remove from testedDecks if needed.
-        setTestedDecks(prev => prev.filter(id => id !== cardsetId));
+        setTestedDecks((prev) => prev.filter((id) => id !== cardsetId));
       } else {
         alert("Failed to delete flashcard deck: " + result.error);
       }
@@ -86,7 +90,7 @@ export function Courses() {
     };
 
     try {
-      const response = await fetch('/api/tests', {
+      const response = await fetch("/api/tests", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(requestData),
@@ -94,7 +98,7 @@ export function Courses() {
       const result = await response.json();
       if (response.ok && result.success) {
         // Mark this deck as already used to create a test.
-        setTestedDecks(prev => [...prev, cardset.id]);
+        setTestedDecks((prev) => [...prev, cardset.id]);
         // Redirect to the newly created test's page.
         router.push(`/tests/${result.data.id}`);
       } else {
@@ -103,6 +107,65 @@ export function Courses() {
     } catch (error) {
       console.error("Error creating test:", error);
       alert("An error occurred while creating the test.");
+    }
+  };
+
+  // Open the edit modal for a specific cardset.
+  const openEditModal = (cardset: any) => {
+    setEditingCardset(cardset);
+    setEditedTitle(cardset.title);
+    setEditedDescription(cardset.description);
+    // Make a copy of the cards array (or empty array if none)
+    setEditedCards(cardset.cards ? [...cardset.cards] : []);
+    setEditingIndices([]);
+  };
+
+  // Update a card’s content in the editedCards state.
+  const handleCardChange = (index: number, field: "question" | "answer", value: string) => {
+    setEditedCards((prev) => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: value };
+      return updated;
+    });
+  };
+
+  // Remove a card from the editedCards array.
+  const handleRemoveCard = (index: number) => {
+    setEditedCards((prev) => prev.filter((_, i) => i !== index));
+    setEditingIndices((prev) => prev.filter((i) => i !== index));
+  };
+
+  // Save the changes made in the modal (deck details and cards) to the backend.
+  const handleSaveChanges = async () => {
+    if (!editingCardset) return;
+    try {
+      const requestData = {
+        title: editedTitle,
+        description: editedDescription,
+        cards: editedCards,
+      };
+      const response = await fetch(`/api/cardsets/${editingCardset.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(requestData),
+      });
+      const result = await response.json();
+      if (result.success) {
+        // Update the cardset in the userCardsets list.
+        setUserCardsets((prev) =>
+          prev.map((cs) =>
+            cs.id === editingCardset.id
+              ? { ...cs, title: editedTitle, description: editedDescription, cards: editedCards }
+              : cs
+          )
+        );
+        setEditingCardset(null);
+      } else {
+        alert("Failed to update flashcard deck: " + result.error);
+      }
+    } catch (error) {
+      console.error("Error updating flashcard deck:", error);
+      alert("An error occurred while updating the flashcard deck.");
     }
   };
 
@@ -135,7 +198,7 @@ export function Courses() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {userCardsets.length > 0 ? (
-                userCardsets.map(cardset => (
+                userCardsets.map((cardset) => (
                   <div
                     key={cardset.id}
                     className="relative overflow-hidden rounded-lg shadow-lg group hover:shadow-xl hover:-translate-y-2 transition-transform duration-300 ease-in-out"
@@ -172,6 +235,16 @@ export function Courses() {
                         >
                           {testedDecks.includes(cardset.id) ? "Test Created" : "Create Test"}
                         </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openEditModal(cardset);
+                          }}
+                        >
+                          Edit Cards
+                        </Button>
                       </div>
                     </div>
                   </div>
@@ -183,9 +256,152 @@ export function Courses() {
           </section>
         </div>
       </main>
+
+      {/* Edit Deck Modal */}
+      {editingCardset && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+          <div className="bg-background rounded-lg shadow-lg w-full max-w-lg p-6 relative">
+            {/* Close Modal Button */}
+            <button
+              onClick={() => setEditingCardset(null)}
+              className="absolute top-4 right-4 text-muted-foreground hover:text-primary"
+              title="Close"
+            >
+              &#10005;
+            </button>
+            <h2 className="text-2xl font-bold mb-4">Edit Flashcard Deck</h2>
+            <div className="space-y-4">
+              {/* Edit Deck Title */}
+              <div>
+                <label className="block text-sm font-medium text-muted-foreground mb-1">Deck Title</label>
+                <input
+                  type="text"
+                  value={editedTitle}
+                  onChange={(e) => setEditedTitle(e.target.value)}
+                  className="w-full p-2 border rounded bg-white"
+                />
+              </div>
+              {/* Edit Deck Description */}
+              <div>
+                <label className="block text-sm font-medium text-muted-foreground mb-1">Deck Description</label>
+                <textarea
+                  value={editedDescription}
+                  onChange={(e) => setEditedDescription(e.target.value)}
+                  className="w-full p-2 border rounded bg-white"
+                ></textarea>
+              </div>
+            </div>
+
+            {/* Flashcards Section */}
+            <div className="mt-6">
+              <h3 className="text-xl font-semibold mb-2">Flashcards</h3>
+              <div className="max-h-80 overflow-y-auto space-y-2">
+                {editedCards.length > 0 ? (
+                  editedCards.map((card, index) => (
+                    <div key={index} className="border rounded p-4">
+                      {editingIndices.includes(index) ? (
+                        <div>
+                          <input
+                            type="text"
+                            placeholder="Question"
+                            value={card.question}
+                            onChange={(e) =>
+                              handleCardChange(index, "question", e.target.value)
+                            }
+                            className="w-full p-2 border rounded mb-2 bg-white"
+                          />
+                          <input
+                            type="text"
+                            placeholder="Answer"
+                            value={card.answer}
+                            onChange={(e) =>
+                              handleCardChange(index, "answer", e.target.value)
+                            }
+                            className="w-full p-2 border rounded mb-2 bg-white"
+                          />
+                          <div className="flex space-x-2">
+                            <Button
+                              size="sm"
+                              onClick={() =>
+                                setEditingIndices((prev) =>
+                                  prev.filter((i) => i !== index)
+                                )
+                              }
+                            >
+                              Save
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() =>
+                                setEditingIndices((prev) =>
+                                  prev.filter((i) => i !== index)
+                                )
+                              }
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <p className="font-semibold">Q: {card.question}</p>
+                            <p className="text-sm text-muted-foreground">A: {card.answer}</p>
+                          </div>
+                          <div className="flex space-x-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() =>
+                                setEditingIndices((prev) => [...prev, index])
+                              }
+                            >
+                              Edit
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => handleRemoveCard(index)}
+                            >
+                              Remove
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-center text-muted-foreground">No cards in this deck.</p>
+                )}
+              </div>
+              <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    const newCard = { question: "", answer: "", image: null };
+                    setEditedCards((prev) => [...prev, newCard]);
+                    // Open the new card in edit mode.
+                    setEditingIndices((prev) => [...prev, editedCards.length]);
+                  }}
+                >
+                  Add Card
+                </Button>
+                <div className="flex space-x-2 mt-4 sm:mt-0">
+                  <Button size="sm" variant="outline" onClick={() => setEditingCardset(null)}>
+                    Cancel
+                  </Button>
+                  <Button size="sm" onClick={handleSaveChanges}>
+                    Save Changes
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 export default Courses;
-
