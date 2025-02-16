@@ -1,5 +1,4 @@
 
-
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -26,18 +25,18 @@ const MAX_WORD_COUNT = {
 
 const FreeTestQuestionSchema = z.object({
   id: z.number(),
-  question: z.string().min(1).refine(
+  question: z.string().min(1, "Question is required").refine(
     val => val.split(/\s+/).filter(Boolean).length <= MAX_WORD_COUNT.question,
     { message: `Question must be at most ${MAX_WORD_COUNT.question} words.` }
   ),
   answerType: z.enum(['multiple', 'short']),
   options: z.array(
-    z.string().min(1).refine(
+    z.string().min(1, "Option is required").refine(
       val => val.split(/\s+/).filter(Boolean).length <= MAX_WORD_COUNT.option,
       { message: `Option must be at most ${MAX_WORD_COUNT.option} words.` }
     )
   ).optional(),
-  correctAnswer: z.string().min(1).refine(
+  correctAnswer: z.string().min(1, "Correct answer is required").refine(
     val => val.split(/\s+/).filter(Boolean).length <= MAX_WORD_COUNT.answer,
     { message: `Answer must be at most ${MAX_WORD_COUNT.answer} words.` }
   ),
@@ -54,12 +53,12 @@ const FreeTestQuestionSchema = z.object({
 
 const FlashcardTestQuestionSchema = z.object({
   id: z.number(),
-  question: z.string().min(1).refine(
+  question: z.string().min(1, "Question is required").refine(
     val => val.split(/\s+/).filter(Boolean).length <= MAX_WORD_COUNT.question,
     { message: `Question must be at most ${MAX_WORD_COUNT.question} words.` }
   ),
   answerType: z.literal('short'),
-  correctAnswer: z.string().min(1).refine(
+  correctAnswer: z.string().min(1, "Answer is required").refine(
     val => val.split(/\s+/).filter(Boolean).length <= MAX_WORD_COUNT.answer,
     { message: `Answer must be at most ${MAX_WORD_COUNT.answer} words.` }
   ),
@@ -68,7 +67,7 @@ const FlashcardTestQuestionSchema = z.object({
 
 const FreeTestSetSchema = z.object({
   id: z.number(),
-  name: z.string().min(1).refine(
+  name: z.string().min(1, "Test set name is required").refine(
     val => val.split(/\s+/).filter(Boolean).length <= MAX_WORD_COUNT.setName,
     { message: `Test Set name must be at most ${MAX_WORD_COUNT.setName} words.` }
   ),
@@ -76,12 +75,12 @@ const FreeTestSetSchema = z.object({
     val => val.split(/\s+/).filter(Boolean).length <= MAX_WORD_COUNT.setDescription,
     { message: `Test Set description must be at most ${MAX_WORD_COUNT.setDescription} words.` }
   ),
-  questions: z.array(FreeTestQuestionSchema).min(1).max(MAX_QUESTIONS),
+  questions: z.array(FreeTestQuestionSchema).min(1, "At least one question is required").max(MAX_QUESTIONS),
 });
 
 const FlashcardTestSetSchema = z.object({
   id: z.number(),
-  name: z.string().min(1).refine(
+  name: z.string().min(1, "Test set name is required").refine(
     val => val.split(/\s+/).filter(Boolean).length <= MAX_WORD_COUNT.setName,
     { message: `Test Set name must be at most ${MAX_WORD_COUNT.setName} words.` }
   ),
@@ -89,7 +88,7 @@ const FlashcardTestSetSchema = z.object({
     val => val.split(/\s+/).filter(Boolean).length <= MAX_WORD_COUNT.setDescription,
     { message: `Test Set description must be at most ${MAX_WORD_COUNT.setDescription} words.` }
   ),
-  questions: z.array(FlashcardTestQuestionSchema).min(1).max(MAX_QUESTIONS),
+  questions: z.array(FlashcardTestQuestionSchema).min(1, "At least one question is required").max(MAX_QUESTIONS),
 });
 
 type FreeTestQuestion = z.infer<typeof FreeTestQuestionSchema>
@@ -176,7 +175,6 @@ export default function TestCreate({ setTestSets, setNotification, flashcardDeck
   }
 
   const saveTestSet = async () => {
-    // Check if user has reached maximum allowed test sets (20)
     if (existingTestSetsCount >= 20) {
       setNotification({ type: 'error', message: 'Maximum of 20 test sets allowed.' })
       return;
@@ -266,112 +264,147 @@ export default function TestCreate({ setTestSets, setNotification, flashcardDeck
   }
 
   return (
-    <div className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="test-set-name" className="text-lg text-cyan-700">
-          Test Set Name (10 words max)
-        </Label>
-        <Input
-          id="test-set-name"
-          value={testSetName}
-          onChange={(e) => setTestSetName(e.target.value)}
-          placeholder="Enter test set name"
-          className="bg-white/50 border-cyan-200 focus:border-cyan-500 focus:ring-cyan-500"
-        />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="test-set-description" className="text-lg text-cyan-700">
-          Test Set Description (50 words max)
-        </Label>
-        <Textarea
-          id="test-set-description"
-          value={testSetDescription}
-          onChange={(e) => setTestSetDescription(e.target.value)}
-          placeholder="Enter test set description"
-          className="bg-white/50 border-cyan-200 focus:border-cyan-500 focus:ring-cyan-500"
-        />
-      </div>
-      {testQuestions.map((question, index) => (
-        <Card key={question.id} className="bg-white/50">
-          <CardContent className="p-4 space-y-4">
-            <div>
-              <Label htmlFor={`test-question-${question.id}`} className="text-lg text-cyan-700">
-                Question (30 words max)
-              </Label>
-              <Input
-                id={`test-question-${question.id}`}
-                value={question.question}
-                onChange={(e) => updateTestQuestion(question.id, 'question', e.target.value)}
-                placeholder="Enter the question"
-                className="mt-1 bg-white/50 border-cyan-200 focus:border-cyan-500 focus:ring-cyan-500"
-              />
-            </div>
-            {!isFlashcardMode && (
+    <div className="ml-64 mt-16 p-8 w-[calc(100%-16rem)] flex flex-col items-center">
+      <div className="w-full max-w-4xl">
+        <div className="space-y-6">
+          <Label htmlFor="test-set-name" className="text-xl text-cyan-700">
+            Test Set Name (10 words max)
+          </Label>
+          <Input
+            id="test-set-name"
+            value={testSetName}
+            onChange={(e) => setTestSetName(e.target.value)}
+            placeholder="Enter test set name"
+            className="bg-white border-cyan-200 focus:border-cyan-500 focus:ring-cyan-500 transition-all duration-200 text-xl py-4 px-4"
+          />
+          {errors['name'] && <p className="text-red-500 text-lg">{errors['name']}</p>}
+        </div>
+        <div className="space-y-6 mt-6">
+          <Label htmlFor="test-set-description" className="text-xl text-cyan-700">
+            Test Set Description (50 words max)
+          </Label>
+          <Textarea
+            id="test-set-description"
+            value={testSetDescription}
+            onChange={(e) => setTestSetDescription(e.target.value)}
+            placeholder="Enter test set description"
+            className="bg-white border-cyan-200 focus:border-cyan-500 focus:ring-cyan-500 transition-all duration-200 text-xl py-4 px-4"
+          />
+          {errors['description'] && <p className="text-red-500 text-lg">{errors['description']}</p>}
+        </div>
+
+        {/* Header row with questions counter and Add Question button */}
+        <div className="flex items-center justify-between mt-8">
+          <p className="text-lg font-semibold text-gray-700">
+            {`Questions: ${testQuestions.length} of ${MAX_QUESTIONS}`}
+          </p>
+          <Button 
+            onClick={addTestQuestion} 
+            className="bg-cyan-600 hover:bg-cyan-700 text-white text-2xl py-4 px-6 transition-colors duration-200"
+            disabled={testQuestions.length >= MAX_QUESTIONS}
+          >
+            <PlusIcon className="mr-3 h-8 w-8" />
+            Add Another Question
+          </Button>
+        </div>
+
+        {testQuestions.map((question) => (
+          <Card key={question.id} className="bg-white shadow-md hover:shadow-xl transition-shadow my-6">
+            <CardContent className="p-6 space-y-6">
               <div>
-                <Label className="text-lg text-cyan-700">Answer Type</Label>
-                <RadioGroup
-                  value={question.answerType}
-                  onValueChange={(value) => updateTestQuestion(question.id, 'answerType', value)}
-                  className="flex space-x-4 mt-1"
-                >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="multiple" id={`multiple-${question.id}`} />
-                    <Label htmlFor={`multiple-${question.id}`}>Multiple Choice</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="short" id={`short-${question.id}`} />
-                    <Label htmlFor={`short-${question.id}`}>Short Answer</Label>
-                  </div>
-                </RadioGroup>
-              </div>
-            )}
-            {!isFlashcardMode && (question.answerType === 'multiple') && (
-              <div className="space-y-2">
-                <Label className="text-lg text-cyan-700">
-                  Options (50 words max each)
+                <Label htmlFor={`test-question-${question.id}`} className="text-xl text-cyan-700">
+                  Question (30 words max)
                 </Label>
-                {question.options?.map((option, optionIndex) => (
-                  <Input
-                    key={optionIndex}
-                    value={option}
-                    onChange={(e) => {
-                      const newOptions = [...(question.options || [])]
-                      newOptions[optionIndex] = e.target.value
-                      updateTestQuestion(question.id, 'options', newOptions)
-                    }}
-                    placeholder={`Option ${optionIndex + 1}`}
-                    className="mt-1 bg-white/50 border-cyan-200 focus:border-cyan-500 focus:ring-cyan-500"
-                  />
-                ))}
+                <Input
+                  id={`test-question-${question.id}`}
+                  value={question.question}
+                  onChange={(e) => updateTestQuestion(question.id, 'question', e.target.value)}
+                  placeholder="Enter the question"
+                  className="mt-2 bg-white border-cyan-200 focus:border-cyan-500 focus:ring-cyan-500 transition-all duration-200 text-xl py-4 px-4"
+                />
+                {errors[`questions.${question.id}.question`] && (
+                  <p className="text-red-500 text-lg">{errors[`questions.${question.id}.question`]}</p>
+                )}
               </div>
-            )}
-            <div>
-              <Label htmlFor={`correct-answer-${question.id}`} className="text-lg text-cyan-700">
-                Correct Answer (50 words max)
-              </Label>
-              <Input
-                id={`correct-answer-${question.id}`}
-                value={question.correctAnswer}
-                onChange={(e) => updateTestQuestion(question.id, 'correctAnswer', e.target.value)}
-                placeholder="Enter the correct answer"
-                className="mt-1 bg-white/50 border-cyan-200 focus:border-cyan-500 focus:ring-cyan-500"
-              />
-            </div>
-            <Button variant="destructive" size="sm" onClick={() => removeTestQuestion(question.id)}>
-              <TrashIcon className="w-4 h-4 mr-1" />
-              Delete Question
-            </Button>
-          </CardContent>
-        </Card>
-      ))}
-      <Button variant="secondary" onClick={addTestQuestion} disabled={testQuestions.length >= MAX_QUESTIONS} className="mr-2">
-        <PlusIcon className="w-4 h-4 mr-2" />
-        Add Question
-      </Button>
-      <Button variant="default" onClick={saveTestSet} disabled={!testSetName || !testQuestions.length} className="mr-2">
-        <SaveIcon className="w-4 h-4 mr-2" />
-        Save Test Set
-      </Button>
+              {!flashcardDeck && (
+                <div className="space-y-6">
+                  <Label className="text-xl text-cyan-700">Answer Type</Label>
+                  <RadioGroup
+                    value={question.answerType}
+                    onValueChange={(value) => updateTestQuestion(question.id, 'answerType', value)}
+                    className="flex space-x-6 mt-2"
+                  >
+                    <div className="flex items-center space-x-3">
+                      <RadioGroupItem value="multiple" id={`multiple-${question.id}`} />
+                      <Label htmlFor={`multiple-${question.id}`} className="text-xl">Multiple Choice</Label>
+                    </div>
+                    <div className="flex items-center space-x-3">
+                      <RadioGroupItem value="short" id={`short-${question.id}`} />
+                      <Label htmlFor={`short-${question.id}`} className="text-xl">Short Answer</Label>
+                    </div>
+                  </RadioGroup>
+                  {question.answerType === 'multiple' && (
+                    <div className="space-y-4">
+                      <Label className="text-xl text-cyan-700">
+                        Options (50 words max each)
+                      </Label>
+                      {question.options?.map((option, optionIndex) => (
+                        <Input
+                          key={optionIndex}
+                          value={option}
+                          onChange={(e) => {
+                            const newOptions = [...(question.options || [])]
+                            newOptions[optionIndex] = e.target.value
+                            updateTestQuestion(question.id, 'options', newOptions)
+                          }}
+                          placeholder={`Option ${optionIndex + 1}`}
+                          className="mt-2 bg-white border-cyan-200 focus:border-cyan-500 focus:ring-cyan-500 transition-all duration-200 text-xl py-4 px-4"
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+              <div>
+                <Label htmlFor={`correct-answer-${question.id}`} className="text-xl text-cyan-700">
+                  Correct Answer (50 words max)
+                </Label>
+                <Input
+                  id={`correct-answer-${question.id}`}
+                  value={question.correctAnswer}
+                  onChange={(e) => updateTestQuestion(question.id, 'correctAnswer', e.target.value)}
+                  placeholder="Enter the correct answer"
+                  className="mt-2 bg-white border-cyan-200 focus:border-cyan-500 focus:ring-cyan-500 transition-all duration-200 text-xl py-4 px-4"
+                />
+                {errors[`questions.${question.id}.correctAnswer`] && (
+                  <p className="text-red-500 text-lg">{errors[`questions.${question.id}.correctAnswer`]}</p>
+                )}
+              </div>
+              <div className="flex justify-end">
+                <Button
+                  variant="destructive"
+                  onClick={() => removeTestQuestion(question.id)}
+                  className="w-full mt-4 transition-colors duration-200 text-xl py-4 px-6"
+                >
+                  <TrashIcon className="mr-3 h-6 w-6" />
+                  Remove Question
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+
+        <div className="flex justify-end mt-8">
+          <Button 
+            onClick={saveTestSet} 
+            className="bg-green-600 hover:bg-green-700 text-white text-2xl py-6 px-10 transition-colors duration-200"
+            disabled={!testSetName || testQuestions.length === 0}
+          >
+            <SaveIcon className="mr-3 h-8 w-8" />
+            Save Test Set
+          </Button>
+        </div>
+      </div>
     </div>
   )
 }
