@@ -11,13 +11,20 @@ import { NextPage } from 'next';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from "@/lib/firebase";
 
-// Need to setup backend stuff here 
-// 2. Allow users to save there cards
-// 3. Change the text in lines 21-23 so that it incorporates the questions and answers the user has created in the createcards page
-
+// Define the types for the flashcard and card set. Notice that the card set now includes
+// lastReviewed and reviewCount (which are recorded at the set level).
 type Flashcard = {
   question: string;
   answer: string;
+};
+
+type CardSetMeta = {
+  id: string;
+  title: string;
+  description: string;
+  cards: Flashcard[];
+  lastReviewed: number; // timestamp (ms); 0 if never reviewed
+  reviewCount: number;
 };
 
 type FlashcardPageProps = {
@@ -28,6 +35,7 @@ type FlashcardPageProps = {
 
 const MemoFlashcard: NextPage<FlashcardPageProps> = ({ params }) => {
   const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
+  const [cardSet, setCardSet] = useState<CardSetMeta | null>(null);
   const [currentCard, setCurrentCard] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -40,21 +48,28 @@ const MemoFlashcard: NextPage<FlashcardPageProps> = ({ params }) => {
   const [endTime, setEndTime] = useState<Date | null>(null);
   const [isCompleted, setIsCompleted] = useState(false);
 
+  // Fetch the card set document from Firestore (which includes title, description,
+  // cards array, lastReviewed, and reviewCount).
   useEffect(() => {
     const fetchFlashcardSet = async () => {
       if (!params.id) return;
-
       try {
         setIsLoading(true);
         const docRef = doc(db, 'cardSets', params.id);
         const docSnap = await getDoc(docRef);
-
         if (docSnap.exists()) {
           const data = docSnap.data();
-          // Directly use the 'cards' field from the document
+          // Expecting that the document contains: title, description, cards, lastReviewed, reviewCount.
           const fetchedCards = data.cards || [];
-          
           setFlashcards(fetchedCards);
+          setCardSet({
+            id: params.id,
+            title: data.title || "Untitled",
+            description: data.description || "",
+            cards: fetchedCards,
+            lastReviewed: data.lastReviewed || 0,
+            reviewCount: data.reviewCount || 0,
+          });
           setStartTime(new Date());
         } else {
           throw new Error('No such document');
@@ -67,7 +82,6 @@ const MemoFlashcard: NextPage<FlashcardPageProps> = ({ params }) => {
         setIsLoading(false);
       }
     };
-
     fetchFlashcardSet();
   }, [params.id]);
 
@@ -99,11 +113,44 @@ const MemoFlashcard: NextPage<FlashcardPageProps> = ({ params }) => {
     }
   };
 
+  // When the user clicks "Check" on the last card, finish the review session.
+  // This function records the current time as lastReviewed and increments reviewCount.
+  const finishReviewSession = async () => {
+    if (!cardSet) return;
+    const finishTime = Date.now();
+    const newReviewCount = cardSet.reviewCount + 1;
+    const updatedCardSet: CardSetMeta = {
+      ...cardSet,
+      lastReviewed: finishTime,
+      reviewCount: newReviewCount,
+    };
+    setCardSet(updatedCardSet);
+    setEndTime(new Date(finishTime));
+    setIsCompleted(true);
+    setShowCelebration(true);
+
+    // Call the API PUT endpoint to update the card set document in Firestore.
+    try {
+      await fetch(`/api/cardsets/${params.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: updatedCardSet.title,
+          description: updatedCardSet.description,
+          cards: updatedCardSet.cards,
+          lastReviewed: updatedCardSet.lastReviewed,
+          reviewCount: updatedCardSet.reviewCount,
+        }),
+      });
+    } catch (error) {
+      console.error("Error updating review session:", error);
+    }
+  };
+
+  // This function replaces handleCheckClick.
   const handleCheckClick = () => {
     if (currentCard === flashcards.length - 1 && isFlipped && !isCompleted) {
-      setEndTime(new Date());
-      setIsCompleted(true);
-      setShowCelebration(true);
+      finishReviewSession();
     }
   };
 
@@ -130,13 +177,10 @@ const MemoFlashcard: NextPage<FlashcardPageProps> = ({ params }) => {
   }
 
   const progress = ((currentCard + 1) / flashcards.length) * 100;
-
   const isLastCard = currentCard === flashcards.length - 1;
   const canCheck = isLastCard && isFlipped && !isCompleted;
-
-  const completionTime = startTime && endTime
-    ? Math.floor((endTime.getTime() - startTime.getTime()) / 1000)
-    : 0;
+  const completionTime =
+    startTime && endTime ? Math.floor((endTime.getTime() - startTime.getTime()) / 1000) : 0;
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-white p-4">
@@ -167,7 +211,6 @@ const MemoFlashcard: NextPage<FlashcardPageProps> = ({ params }) => {
                 </p>
               </div>
             </div>
-
             <div
               className="absolute inset-0 bg-white rounded-lg p-6 border-2 border-gray-200 shadow-lg"
               style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
@@ -183,7 +226,6 @@ const MemoFlashcard: NextPage<FlashcardPageProps> = ({ params }) => {
             </div>
           </motion.div>
         </div>
-
         <div className="flex justify-between mt-6">
           <Button
             variant="outline"
@@ -228,7 +270,6 @@ const MemoFlashcard: NextPage<FlashcardPageProps> = ({ params }) => {
             <span className="sr-only">Next card</span>
           </Button>
         </div>
-
         <Dialog>
           <DialogTrigger asChild>
             <Button className="w-full mt-4 bg-blue-500 hover:bg-blue-600 text-white" disabled={isCompleted}>
@@ -266,7 +307,6 @@ const MemoFlashcard: NextPage<FlashcardPageProps> = ({ params }) => {
             <Button onClick={addCard}>Add Card</Button>
           </DialogContent>
         </Dialog>
-
         <AnimatePresence>
           {showCelebration && (
             <motion.div
@@ -278,13 +318,13 @@ const MemoFlashcard: NextPage<FlashcardPageProps> = ({ params }) => {
               <div className="bg-white p-8 rounded-lg text-center">
                 <h2 className="text-3xl font-bold mb-4">Congratulations!</h2>
                 <p className="text-xl mb-6">
-                  You completed the flashcard in {completionTime} seconds!
+                  You completed the flashcard set in {completionTime} seconds!
                 </p>
                 <div className="flex justify-center space-x-4">
                   <Button onClick={resetFlashcards} className="bg-blue-500 hover:bg-blue-600 text-white">
                     <RefreshCw className="mr-2 h-4 w-4" /> Redo
                   </Button>
-                  <Button onClick={() => window.location.href = '/'} className="bg-green-500 hover:bg-green-600 text-white">
+                  <Button onClick={() => (window.location.href = '/')} className="bg-green-500 hover:bg-green-600 text-white">
                     <Home className="mr-2 h-4 w-4" /> Home
                   </Button>
                 </div>
@@ -295,6 +335,6 @@ const MemoFlashcard: NextPage<FlashcardPageProps> = ({ params }) => {
       </div>
     </div>
   );
-}
+};
 
 export default MemoFlashcard;

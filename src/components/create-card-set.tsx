@@ -1,9 +1,263 @@
 
 
-'use client'
+// 'use client'
 
-import { useState, useRef, useEffect } from 'react'
-import Image from 'next/image'
+// import { useState, useRef, useEffect } from 'react'
+// import Image from 'next/image'
+// import { Button } from "@/components/ui/button"
+// import { Card, CardContent } from "@/components/ui/card"
+// import { Input } from "@/components/ui/input"
+// import { Label } from "@/components/ui/label"
+// import { Textarea } from "@/components/ui/textarea"
+// import { PlusIcon, SaveIcon, TrashIcon } from 'lucide-react'
+// import { z } from 'zod'
+// import { auth } from '@/lib/firebase'
+// import { User } from 'firebase/auth'
+
+// const MAX_CARDS = 20
+// const MAX_WORD_COUNT = {
+//   setDescription: 50,
+//   question: 20,
+//   answer: 40,
+// }
+
+// const FlashcardSchema = z.object({
+//   id: z.number(),
+//   question: z.string().min(1).refine(
+//     (val) => val.split(/\s+/).filter(Boolean).length <= MAX_WORD_COUNT.question,
+//     { message: `Question must be at most ${MAX_WORD_COUNT.question} words.` }
+//   ),
+//   answer: z.string().min(1).refine(
+//     (val) => val.split(/\s+/).filter(Boolean).length <= MAX_WORD_COUNT.answer,
+//     { message: `Answer must be at most ${MAX_WORD_COUNT.answer} words.` }
+//   ),
+//   image: z.string().nullable()
+// })
+
+// export const CardSetSchema = z.object({
+//   id: z.number(),
+//   title: z.string().min(1).refine(
+//     (val) => val.split(/\s+/).filter(Boolean).length <= 10,
+//     { message: "Title must be at most 10 words." }
+//   ),
+//   description: z.string().min(0).refine(
+//     (val) => val.split(/\s+/).filter(Boolean).length <= MAX_WORD_COUNT.setDescription,
+//     { message: `Description must be at most ${MAX_WORD_COUNT.setDescription} words.` }
+//   ),
+//   cards: z.array(FlashcardSchema).min(1).max(MAX_CARDS)
+// })
+
+// type Flashcard = z.infer<typeof FlashcardSchema>
+// type CardSet = z.infer<typeof CardSetSchema>
+
+// interface CreateCardSetProps {
+//   setCardSets: React.Dispatch<React.SetStateAction<CardSet[]>>
+//   setNotification: (notification: { type: 'success' | 'error', message: string } | null) => void
+//   existingCardSetsCount?: number
+// }
+
+// export default function CreateCardSet({ setCardSets, setNotification, existingCardSetsCount = 0 }: CreateCardSetProps) {
+//   const [flashcards, setFlashcards] = useState<Flashcard[]>([{ id: 1, question: '', answer: '', image: null }])
+//   const [setName, setSetName] = useState('')
+//   const [setDescription, setSetDescription] = useState('')
+//   const [errors, setErrors] = useState<{ [key: string]: string }>({})
+//   const [currentUser, setCurrentUser] = useState<User | null>(null)
+//   const fileInputRef = useRef<HTMLInputElement>(null)
+
+//   useEffect(() => {
+//     const unsubscribe = auth.onAuthStateChanged((user) => {
+//       setCurrentUser(user)
+//     })
+//     return () => unsubscribe()
+//   }, [])
+
+//   const addFlashcard = () => {
+//     if (flashcards.length < MAX_CARDS) {
+//       setFlashcards([...flashcards, { id: Date.now(), question: '', answer: '', image: null }])
+//     } else {
+//       setNotification({ type: 'error', message: `Maximum of ${MAX_CARDS} cards allowed.` })
+//     }
+//   }
+
+//   const updateFlashcard = (id: number, field: 'question' | 'answer', value: string) => {
+//     setFlashcards(flashcards.map(card => 
+//       card.id === id ? { ...card, [field]: value } : card
+//     ))
+//   }
+
+//   const saveFlashcards = async () => {
+//     // Check if user has reached maximum allowed flashcard sets (20)
+//     if (existingCardSetsCount >= 20) {
+//       setNotification({ type: 'error', message: 'Maximum of 20 flashcard sets allowed.' })
+//       return;
+//     }
+//     if (!currentUser) {
+//       setNotification({ type: 'error', message: 'You must be logged in to save card sets.' })
+//       return
+//     }
+
+//     try {
+//       const newSet: CardSet = {
+//         id: Date.now(),
+//         title: setName,
+//         description: setDescription,
+//         cards: flashcards
+//       }
+//       const validatedSet = CardSetSchema.parse(newSet)
+
+//       const cardSetData = {
+//         ...validatedSet,
+//         createdBy: {
+//           uid: currentUser.uid,
+//           displayName: currentUser.displayName || 'Anonymous',
+//           email: currentUser.email || ''
+//         },
+//         cards: validatedSet.cards.map(card => ({
+//           question: card.question,
+//           answer: card.answer,
+//           image: card.image,
+//         }))
+//       }
+
+//       const response = await fetch('/api/cardsets', {
+//         method: 'POST',
+//         headers: { 'Content-Type': 'application/json' },
+//         body: JSON.stringify(cardSetData)
+//       })
+
+//       const result = await response.json()
+
+//       if (result.success) {
+//         setCardSets(prev => [...prev, validatedSet])
+//         setNotification({ type: 'success', message: `Card set "${validatedSet.title}" saved successfully!` })
+//         setFlashcards([{ id: Date.now(), question: '', answer: '', image: null }])
+//         setSetName('')
+//         setSetDescription('')
+//         setErrors({})
+//       } else {
+//         throw new Error(result.error || 'Failed to save card set')
+//       }
+//     } catch (error) {
+//       if (error instanceof z.ZodError) {
+//         const newErrors: { [key: string]: string } = {}
+//         error.errors.forEach(err => {
+//           newErrors[err.path.join('.')] = err.message
+//         })
+//         setErrors(newErrors)
+//         setNotification({ type: 'error', message: "Please correct the errors in the form." })
+//       } else {
+//         console.error('Error saving card set:', error)
+//         setNotification({ type: 'error', message: error instanceof Error ? error.message : 'An unknown error occurred' })
+//       }
+//     }
+//   }
+
+//   const removeFlashcard = (id: number) => {
+//     setFlashcards(flashcards.filter(card => card.id !== id))
+//   }
+
+//   return (
+//     <div className="space-y-4">
+//       {!currentUser && (
+//         <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded relative" role="alert">
+//           <span className="block sm:inline">Please log in to create and save card sets.</span>
+//         </div>
+//       )}
+
+//       <div className="space-y-2">
+//         <Label htmlFor="set-name" className="text-lg text-cyan-700">Set Name (10 words max)</Label>
+//         <Input
+//           id="set-name"
+//           value={setName}
+//           onChange={(e) => setSetName(e.target.value)}
+//           placeholder="Enter set name"
+//           className="bg-white/50 border-cyan-200 focus:border-cyan-500 focus:ring-cyan-500"
+//         />
+//         {errors['title'] && <p className="text-red-500 text-sm">{errors['title']}</p>}
+//       </div>
+
+//       <div className="space-y-2">
+//         <Label htmlFor="set-description" className="text-lg text-cyan-700">Set Description (50 words max)</Label>
+//         <Textarea
+//           id="set-description"
+//           value={setDescription}
+//           onChange={(e) => setSetDescription(e.target.value)}
+//           placeholder="Enter set description"
+//           className="bg-white/50 border-cyan-200 focus:border-cyan-500 focus:ring-cyan-500"
+//         />
+//         {errors['description'] && <p className="text-red-500 text-sm">{errors['description']}</p>}
+//       </div>
+
+//       {flashcards.map((card, index) => (
+//         <Card key={card.id} className="bg-white/50">
+//           <CardContent className="p-4 grid grid-cols-2 gap-4">
+//             <div className="space-y-4">
+//               <div>
+//                 <Label htmlFor={`question-${card.id}`} className="text-lg text-cyan-700">Question (20 words max)</Label>
+//                 <Input
+//                   id={`question-${card.id}`}
+//                   value={card.question}
+//                   onChange={(e) => updateFlashcard(card.id, 'question', e.target.value)}
+//                   placeholder="Enter the question"
+//                   className="mt-1 bg-white/50 border-cyan-200 focus:border-cyan-500 focus:ring-cyan-500"
+//                 />
+//                 {errors[`cards.${index}.question`] && <p className="text-red-500 text-sm">{errors[`cards.${index}.question`]}</p>}
+//               </div>
+//             </div>
+
+//             <div className="space-y-4">
+//               <div>
+//                 <Label htmlFor={`answer-${card.id}`} className="text-lg text-cyan-700">Answer (40 words max)</Label>
+//                 <Input
+//                   id={`answer-${card.id}`}
+//                   value={card.answer}
+//                   onChange={(e) => updateFlashcard(card.id, 'answer', e.target.value)}
+//                   placeholder="Enter the answer"
+//                   className="mt-1 bg-white/50 border-cyan-200 focus:border-cyan-500 focus:ring-cyan-500"
+//                 />
+//                 {errors[`cards.${index}.answer`] && <p className="text-red-500 text-sm">{errors[`cards.${index}.answer`]}</p>}
+//               </div>
+//               <Button
+//                 variant="destructive"
+//                 onClick={() => removeFlashcard(card.id)}
+//                 className="w-full mt-2"
+//               >
+//                 <TrashIcon className="mr-2 h-4 w-4" />
+//                 Remove Card
+//               </Button>
+//             </div>
+//           </CardContent>
+//         </Card>
+//       ))}
+
+//       <div className="flex justify-center my-6">
+//         <Button 
+//           onClick={addFlashcard} 
+//           className="bg-cyan-600 hover:bg-cyan-700 text-white text-xl py-3 px-8" 
+//           disabled={flashcards.length >= MAX_CARDS || !currentUser}
+//         >
+//           <PlusIcon className="mr-2 h-6 w-6" />
+//           Add More Cards
+//         </Button>
+//       </div>
+
+//       <div className="flex justify-end">
+//         <Button 
+//           onClick={saveFlashcards} 
+//           className="bg-green-600 hover:bg-green-700 text-white"
+//           disabled={!currentUser}
+//         >
+//           <SaveIcon className="mr-2 h-5 w-5" />
+//           Save Card Set
+//         </Button>
+//       </div>
+//     </div>
+//   )
+// }
+
+"use client"
+
+import { useState, useEffect } from 'react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -14,6 +268,7 @@ import { z } from 'zod'
 import { auth } from '@/lib/firebase'
 import { User } from 'firebase/auth'
 
+// Maximum limits and word counts
 const MAX_CARDS = 20
 const MAX_WORD_COUNT = {
   setDescription: 50,
@@ -21,6 +276,8 @@ const MAX_WORD_COUNT = {
   answer: 40,
 }
 
+// We still keep flashcard-level data for the content.
+// (Review tracking will be stored at the card set level.)
 const FlashcardSchema = z.object({
   id: z.number(),
   question: z.string().min(1).refine(
@@ -31,7 +288,7 @@ const FlashcardSchema = z.object({
     (val) => val.split(/\s+/).filter(Boolean).length <= MAX_WORD_COUNT.answer,
     { message: `Answer must be at most ${MAX_WORD_COUNT.answer} words.` }
   ),
-  image: z.string().nullable()
+  image: z.string().nullable(),
 })
 
 export const CardSetSchema = z.object({
@@ -57,17 +314,16 @@ interface CreateCardSetProps {
 }
 
 export default function CreateCardSet({ setCardSets, setNotification, existingCardSetsCount = 0 }: CreateCardSetProps) {
-  const [flashcards, setFlashcards] = useState<Flashcard[]>([{ id: 1, question: '', answer: '', image: null }])
+  const [flashcards, setFlashcards] = useState<Flashcard[]>([
+    { id: 1, question: '', answer: '', image: null }
+  ])
   const [setName, setSetName] = useState('')
   const [setDescription, setSetDescription] = useState('')
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
   const [currentUser, setCurrentUser] = useState<User | null>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
-      setCurrentUser(user)
-    })
+    const unsubscribe = auth.onAuthStateChanged(user => setCurrentUser(user))
     return () => unsubscribe()
   }, [])
 
@@ -80,22 +336,20 @@ export default function CreateCardSet({ setCardSets, setNotification, existingCa
   }
 
   const updateFlashcard = (id: number, field: 'question' | 'answer', value: string) => {
-    setFlashcards(flashcards.map(card => 
+    setFlashcards(flashcards.map(card =>
       card.id === id ? { ...card, [field]: value } : card
     ))
   }
 
   const saveFlashcards = async () => {
-    // Check if user has reached maximum allowed flashcard sets (20)
     if (existingCardSetsCount >= 20) {
       setNotification({ type: 'error', message: 'Maximum of 20 flashcard sets allowed.' })
       return;
     }
     if (!currentUser) {
       setNotification({ type: 'error', message: 'You must be logged in to save card sets.' })
-      return
+      return;
     }
-
     try {
       const newSet: CardSet = {
         id: Date.now(),
@@ -105,6 +359,7 @@ export default function CreateCardSet({ setCardSets, setNotification, existingCa
       }
       const validatedSet = CardSetSchema.parse(newSet)
 
+      // Card set–level review metadata: initialize lastReviewed and reviewCount to 0.
       const cardSetData = {
         ...validatedSet,
         createdBy: {
@@ -112,6 +367,9 @@ export default function CreateCardSet({ setCardSets, setNotification, existingCa
           displayName: currentUser.displayName || 'Anonymous',
           email: currentUser.email || ''
         },
+        // NEW: Card set level review metadata:
+        lastReviewed: 0,
+        reviewCount: 0,
         cards: validatedSet.cards.map(card => ({
           question: card.question,
           answer: card.answer,
@@ -124,9 +382,7 @@ export default function CreateCardSet({ setCardSets, setNotification, existingCa
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(cardSetData)
       })
-
       const result = await response.json()
-
       if (result.success) {
         setCardSets(prev => [...prev, validatedSet])
         setNotification({ type: 'success', message: `Card set "${validatedSet.title}" saved successfully!` })
@@ -159,8 +415,8 @@ export default function CreateCardSet({ setCardSets, setNotification, existingCa
   return (
     <div className="space-y-4">
       {!currentUser && (
-        <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded relative" role="alert">
-          <span className="block sm:inline">Please log in to create and save card sets.</span>
+        <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded" role="alert">
+          <span>Please log in to create and save card sets.</span>
         </div>
       )}
 
@@ -169,11 +425,10 @@ export default function CreateCardSet({ setCardSets, setNotification, existingCa
         <Input
           id="set-name"
           value={setName}
-          onChange={(e) => setSetName(e.target.value)}
+          onChange={e => setSetName(e.target.value)}
           placeholder="Enter set name"
           className="bg-white/50 border-cyan-200 focus:border-cyan-500 focus:ring-cyan-500"
         />
-        {errors['title'] && <p className="text-red-500 text-sm">{errors['title']}</p>}
       </div>
 
       <div className="space-y-2">
@@ -181,42 +436,34 @@ export default function CreateCardSet({ setCardSets, setNotification, existingCa
         <Textarea
           id="set-description"
           value={setDescription}
-          onChange={(e) => setSetDescription(e.target.value)}
+          onChange={e => setSetDescription(e.target.value)}
           placeholder="Enter set description"
           className="bg-white/50 border-cyan-200 focus:border-cyan-500 focus:ring-cyan-500"
         />
-        {errors['description'] && <p className="text-red-500 text-sm">{errors['description']}</p>}
       </div>
 
       {flashcards.map((card, index) => (
         <Card key={card.id} className="bg-white/50">
           <CardContent className="p-4 grid grid-cols-2 gap-4">
             <div className="space-y-4">
-              <div>
-                <Label htmlFor={`question-${card.id}`} className="text-lg text-cyan-700">Question (20 words max)</Label>
-                <Input
-                  id={`question-${card.id}`}
-                  value={card.question}
-                  onChange={(e) => updateFlashcard(card.id, 'question', e.target.value)}
-                  placeholder="Enter the question"
-                  className="mt-1 bg-white/50 border-cyan-200 focus:border-cyan-500 focus:ring-cyan-500"
-                />
-                {errors[`cards.${index}.question`] && <p className="text-red-500 text-sm">{errors[`cards.${index}.question`]}</p>}
-              </div>
+              <Label htmlFor={`question-${card.id}`} className="text-lg text-cyan-700">Question (20 words max)</Label>
+              <Input
+                id={`question-${card.id}`}
+                value={card.question}
+                onChange={e => updateFlashcard(card.id, 'question', e.target.value)}
+                placeholder="Enter the question"
+                className="mt-1 bg-white/50 border-cyan-200 focus:border-cyan-500 focus:ring-cyan-500"
+              />
             </div>
-
             <div className="space-y-4">
-              <div>
-                <Label htmlFor={`answer-${card.id}`} className="text-lg text-cyan-700">Answer (40 words max)</Label>
-                <Input
-                  id={`answer-${card.id}`}
-                  value={card.answer}
-                  onChange={(e) => updateFlashcard(card.id, 'answer', e.target.value)}
-                  placeholder="Enter the answer"
-                  className="mt-1 bg-white/50 border-cyan-200 focus:border-cyan-500 focus:ring-cyan-500"
-                />
-                {errors[`cards.${index}.answer`] && <p className="text-red-500 text-sm">{errors[`cards.${index}.answer`]}</p>}
-              </div>
+              <Label htmlFor={`answer-${card.id}`} className="text-lg text-cyan-700">Answer (40 words max)</Label>
+              <Input
+                id={`answer-${card.id}`}
+                value={card.answer}
+                onChange={e => updateFlashcard(card.id, 'answer', e.target.value)}
+                placeholder="Enter the answer"
+                className="mt-1 bg-white/50 border-cyan-200 focus:border-cyan-500 focus:ring-cyan-500"
+              />
               <Button
                 variant="destructive"
                 onClick={() => removeFlashcard(card.id)}
