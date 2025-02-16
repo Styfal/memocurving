@@ -25,6 +25,7 @@ import { NextPage } from "next";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
+// Define types for flashcards and card set.
 type Flashcard = {
   question: string;
   answer: string;
@@ -35,7 +36,7 @@ type CardSetMeta = {
   title: string;
   description: string;
   cards: Flashcard[];
-  lastReviewed: number;
+  lastReviewed: number; // timestamp in ms; 0 if never reviewed
   reviewCount: number;
 };
 
@@ -43,7 +44,19 @@ type FlashcardPageProps = {
   params: { id: string };
 };
 
-const MemoFlashcardPage: NextPage<FlashcardPageProps> = ({ params }) => {
+// Helper functions to compute and format the next review date.
+const msPerDay = 1000 * 60 * 60 * 24;
+const getNextReviewTime = (lastReviewed: number, reviewCount: number): number => {
+  if (lastReviewed === 0) return Date.now() + msPerDay;
+  return lastReviewed + (reviewCount + 1) * msPerDay;
+};
+
+const formatDate = (timestamp: number): string => {
+  const options: Intl.DateTimeFormatOptions = { day: "2-digit", month: "short", year: "numeric" };
+  return new Date(timestamp).toLocaleDateString(undefined, options);
+};
+
+const MemoFlashcard: NextPage<FlashcardPageProps> = ({ params }) => {
   const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
   const [cardSet, setCardSet] = useState<CardSetMeta | null>(null);
   const [currentCard, setCurrentCard] = useState(0);
@@ -58,7 +71,7 @@ const MemoFlashcardPage: NextPage<FlashcardPageProps> = ({ params }) => {
   const [endTime, setEndTime] = useState<Date | null>(null);
   const [isCompleted, setIsCompleted] = useState(false);
 
-  // Fetch card set from Firestore
+  // Fetch the card set document from Firestore.
   useEffect(() => {
     const fetchFlashcardSet = async () => {
       if (!params.id) return;
@@ -141,7 +154,7 @@ const MemoFlashcardPage: NextPage<FlashcardPageProps> = ({ params }) => {
     }
   };
 
-  // Finish review session and update Firestore
+  // Finish review session and update Firestore.
   const finishReviewSession = async () => {
     if (!cardSet) return;
     const finishTime = Date.now();
@@ -197,6 +210,12 @@ const MemoFlashcardPage: NextPage<FlashcardPageProps> = ({ params }) => {
   const canCheck = isLastCard && isFlipped && !isCompleted;
   const completionTime =
     startTime && endTime ? Math.floor((endTime.getTime() - startTime.getTime()) / 1000) : 0;
+
+  // Calculate the next review date using the updated card set.
+  const nextReview =
+    cardSet && cardSet.lastReviewed !== undefined
+      ? formatDate(getNextReviewTime(cardSet.lastReviewed, cardSet.reviewCount))
+      : "N/A";
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-white p-4">
@@ -359,9 +378,14 @@ const MemoFlashcardPage: NextPage<FlashcardPageProps> = ({ params }) => {
             >
               <div className="bg-white p-8 rounded-lg text-center">
                 <h2 className="text-3xl font-bold mb-4">Congratulations!</h2>
-                <p className="text-xl mb-6">
+                <p className="text-xl mb-4">
                   You completed the flashcard set in {completionTime} seconds!
                 </p>
+                {cardSet && (
+                  <p className="text-lg mb-6">
+                    Next Review: {nextReview}
+                  </p>
+                )}
                 <div className="flex justify-center space-x-6">
                   <Button
                     onClick={resetFlashcards}
@@ -371,11 +395,11 @@ const MemoFlashcardPage: NextPage<FlashcardPageProps> = ({ params }) => {
                     <RefreshCw className="mr-2 h-6 w-6" /> Redo
                   </Button>
                   <Button
-                    onClick={() => (window.location.href = "/")}
+                    onClick={() => (window.location.href = "/cards")}
                     className="bg-green-500 hover:bg-green-600 text-white transition-transform hover:scale-110"
-                    aria-label="Return home"
+                    aria-label="Menu"
                   >
-                    <Home className="mr-2 h-6 w-6" /> Home
+                    <Home className="mr-2 h-6 w-6" /> Menu
                   </Button>
                 </div>
               </div>
@@ -387,4 +411,4 @@ const MemoFlashcardPage: NextPage<FlashcardPageProps> = ({ params }) => {
   );
 };
 
-export default MemoFlashcardPage;
+export default MemoFlashcard;

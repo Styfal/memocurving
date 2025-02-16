@@ -1,13 +1,13 @@
-"use client"
+"use client";
 
-import { MemoFlashcard } from "@/components/memoflashcard"
+import { MemoFlashcard } from "@/components/memoflashcard";
 
 const Page = () => {
-  return(
+  return (
     <div className="w-full">
       <MemoFlashcard />
     </div>
-  )
-}
+  );
+};
 
-export default Page
+export default Page;

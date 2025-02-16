@@ -47,7 +47,7 @@ export function MemoFlashcard() {
     }
   }, [currentCard, startTime]);
 
-  // Enable keyboard navigation: Left/Right to navigate; Up/Down/Space to flip.
+  // Enable keyboard navigation: Left/Right for navigation; Up/Down/Space to flip.
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "ArrowRight") {
@@ -110,7 +110,7 @@ export function MemoFlashcard() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-white p-4">
-      {/* Larger container for bigger cards */}
+      {/* Increased container size for bigger cards */}
       <div className="w-full max-w-3xl">
         <Progress value={progress} className="mb-4 transition-all duration-300" />
 
@@ -282,11 +282,11 @@ export function MemoFlashcard() {
                     <RefreshCw className="mr-2 h-6 w-6" /> Redo
                   </Button>
                   <Button
-                    onClick={() => (window.location.href = "/")}
+                    onClick={() => (window.location.href = "/cards")}
                     className="bg-green-500 hover:bg-green-600 text-white transition-transform hover:scale-110"
-                    aria-label="Return home"
+                    aria-label="Menu"
                   >
-                    <Home className="mr-2 h-6 w-6" /> Home
+                    <Home className="mr-2 h-6 w-6" /> Menu
                   </Button>
                 </div>
               </div>
