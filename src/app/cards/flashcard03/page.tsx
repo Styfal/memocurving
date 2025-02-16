@@ -1,19 +1,13 @@
 "use client"
 
-import MaxWidthWrapper from "@/components/MaxWidthWrapper"
-import { MemoFlashcard } from "@/components/memoflashcard" 
-import { cn } from "@/lib/utils"
+import { MemoFlashcard } from "@/components/memoflashcard"
 
-const Page= () => {
-
-   return( 
-    <MaxWidthWrapper> 
-     <MemoFlashcard />
-    </MaxWidthWrapper>
-   )
-    
-
- 
+const Page = () => {
+  return(
+    <div className="w-full">
+      <MemoFlashcard />
+    </div>
+  )
 }
 
 export default Page
