@@ -478,9 +478,9 @@ export default function TestCourse() {
       <header className="py-12 px-4 md:px-6">
         <div className="container max-w-5xl mx-auto flex flex-col items-center space-y-4 text-center">
           <img
-            src="/memocurvelogo.svg"
+            src="/textless-logo.svg"
             alt="Logo"
-            className="h-60 w-auto"
+            className="h-80 w-auto"
           />
           <h1 className="text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
             <span className="bg-cyan-500 text-white px-2">Conduct</span> Tests

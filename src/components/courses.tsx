@@ -591,7 +591,7 @@ export function Courses() {
         <div className="container max-w-5xl mx-auto flex flex-col items-center">
           {/* Logo */}
           <div className="flex items-center justify-center mb-4">
-            <img src="/memocurvelogo.svg" alt="MemoCurve Logo" className="h-60 w-auto" />
+            <img src="/textless-logo.svg" alt="MemoCurve Logo" className="h-80 w-auto" />
           </div>
           {/* Title & Subheading */}
           <div className="space-y-4 text-center">
