@@ -1,7 +1,7 @@
-import { NextResponse } from 'next/server'
+import { NextResponse } from 'next/server';
 
 export async function POST(request: Request) {
-  const { prompt } = await request.json()
+  const { prompt } = await request.json();
 
   try {
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -13,14 +13,17 @@ export async function POST(request: Request) {
       body: JSON.stringify({
         model: "gpt-3.5-turbo",
         messages: [{ role: "user", content: prompt }],
-        max_tokens: 150,
+        max_tokens: 800, // Increased token limit for detailed output
+        // Optionally, add a stop sequence if necessary:
+        // stop: ["\n"]
       }),
-    })
+    });
 
-    const data = await response.json()
-    return NextResponse.json(data)
+    const data = await response.json();
+    console.log("OpenAI API Response:", data); // Log the full response for debugging.
+    return NextResponse.json(data);
   } catch (error) {
-    console.error("Error calling OpenAI API:", error)
-    return NextResponse.json({ error: "Error calling OpenAI API" }, { status: 500 })
+    console.error("Error calling OpenAI API:", error);
+    return NextResponse.json({ error: "Error calling OpenAI API" }, { status: 500 });
   }
 }
