@@ -9,14 +9,32 @@ export default function AiCreate() {
   const [aiMessages, setAiMessages] = useState<{ role: 'user' | 'ai', content: string }[]>([])
   const [aiInput, setAiInput] = useState('')
 
-  const sendAiMessage = () => {
+  const sendAiMessage = async () => {
     if (aiInput.trim()) {
-      setAiMessages([...aiMessages, { role: 'user', content: aiInput }])
-      // API integration could be added here
-      setTimeout(() => {
-        setAiMessages(prev => [...prev, { role: 'ai', content: `You said: ${aiInput}` }])
-      }, 1000)
+      const userMessage = aiInput.trim()
+      // Add the user's message to the state
+      setAiMessages(prev => [...prev, { role: 'user', content: userMessage }])
       setAiInput('')
+
+      try {
+        const response = await fetch('/api/ai/openai', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ prompt: userMessage })
+        })
+        const data = await response.json()
+        // Extract the AI's response from the API data
+        const aiResponse = data.choices && data.choices[0]?.message?.content
+          ? data.choices[0].message.content.trim()
+          : 'No response from AI.'
+
+        setAiMessages(prev => [...prev, { role: 'ai', content: aiResponse }])
+      } catch (error) {
+        console.error('Error calling AI API:', error)
+        setAiMessages(prev => [...prev, { role: 'ai', content: 'Error calling AI API' }])
+      }
     }
   }
 
