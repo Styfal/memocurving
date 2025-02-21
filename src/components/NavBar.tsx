@@ -1,5 +1,3 @@
-
-
 'use client'
 
 import * as React from 'react'
@@ -7,7 +5,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { Menu, UserCircle, Loader2 } from 'lucide-react'
 import { onAuthStateChanged, signOut, User } from 'firebase/auth'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { auth } from '@/lib/firebase'
 import { Button } from '@/components/ui/button'
 import {
@@ -22,6 +20,7 @@ export default function Navbar() {
   const [user, setUser] = React.useState<User | null>(auth.currentUser)
   const [signOutLoading, setSignOutLoading] = React.useState(false)
   const router = useRouter()
+  const pathname = usePathname() // current URL path
 
   React.useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
@@ -42,7 +41,7 @@ export default function Navbar() {
     }
   }
 
-  // Modify navItems based on authentication status
+  // Define navItems based on authentication status
   const navItems = user
     ? [
         { name: 'Profile', href: '/profile' },
@@ -52,6 +51,15 @@ export default function Navbar() {
         { name: 'Create', href: '/create' },
       ]
     : []
+
+  // Define active/inactive styles.
+  // Active: filled blue background with white text.
+  // Inactive for nav items: transparent background with black text.
+  const activeClasses = 'bg-[#0D005B] text-white'
+  const navInactiveClasses = 'bg-transparent text-black'
+
+  // Original styles for the "View Pricing" button when not active.
+  const pricingInactiveClasses = 'bg-primary text-primary-foreground hover:bg-primary/90'
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-sm border-b border-border">
@@ -73,16 +81,25 @@ export default function Navbar() {
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-4">
             {navItems.map((item) => (
-              <Button key={item.name} variant="ghost" asChild>
+              <Button
+                key={item.name}
+                variant="ghost"
+                asChild
+                className={pathname === item.href ? activeClasses : navInactiveClasses}
+              >
                 <Link href={item.href}>{item.name}</Link>
               </Button>
             ))}
-            <Button variant="outline" className="bg-primary text-primary-foreground hover:bg-primary/90" asChild>
+            <Button
+              variant="outline"
+              asChild
+              className={pathname === '/pricing' ? activeClasses : pricingInactiveClasses}
+            >
               <Link href="/pricing">View Pricing</Link>
             </Button>
             {user ? (
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={handleSignOut}
                 className="flex items-center gap-2"
                 disabled={signOutLoading}
@@ -90,9 +107,9 @@ export default function Navbar() {
                 {signOutLoading ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : user.photoURL ? (
-                  <img 
-                    src={user.photoURL} 
-                    alt="Profile" 
+                  <img
+                    src={user.photoURL}
+                    alt="Profile"
                     className="h-6 w-6 rounded-full"
                   />
                 ) : (
@@ -101,7 +118,7 @@ export default function Navbar() {
                 Sign Out
               </Button>
             ) : (
-              <Button 
+              <Button
                 variant="outline"
                 className="bg-primary text-primary-foreground hover:bg-primary/90"
                 asChild
@@ -113,7 +130,12 @@ export default function Navbar() {
 
           {/* Mobile Navigation */}
           <div className="flex items-center md:hidden">
-            <Button variant="outline" size="sm" className="mr-2 bg-primary text-primary-foreground hover:bg-primary/90" asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              asChild
+              className={pathname === '/pricing' ? activeClasses : pricingInactiveClasses}
+            >
               <Link href="/pricing">View Pricing</Link>
             </Button>
             <DropdownMenu>
@@ -126,7 +148,12 @@ export default function Navbar() {
               <DropdownMenuContent align="end" className="w-[200px]">
                 {navItems.map((item) => (
                   <DropdownMenuItem key={item.name} asChild>
-                    <Link href={item.href}>{item.name}</Link>
+                    <Link
+                      href={item.href}
+                      className={pathname === item.href ? activeClasses : navInactiveClasses}
+                    >
+                      {item.name}
+                    </Link>
                   </DropdownMenuItem>
                 ))}
                 {user ? (
@@ -155,4 +182,3 @@ export default function Navbar() {
     </nav>
   )
 }
-
