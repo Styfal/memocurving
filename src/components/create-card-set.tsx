@@ -1,12 +1,13 @@
+
+
 "use client"
 
 import { useState, useEffect } from 'react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { PlusIcon, SaveIcon, TrashIcon, ChevronUp, ChevronDown } from 'lucide-react'
+import { PlusIcon, SaveIcon, TrashIcon } from 'lucide-react'
 import { z } from 'zod'
 import { auth } from '@/lib/firebase'
 import { User } from 'firebase/auth'
@@ -63,8 +64,6 @@ export default function CreateCardSet({ setCardSets, setNotification, existingCa
   const [setDescription, setSetDescription] = useState('')
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
   const [currentUser, setCurrentUser] = useState<User | null>(null)
-  // Track collapsed state for each card (by card id)
-  const [collapsedCards, setCollapsedCards] = useState<Record<number, boolean>>({})
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(user => setCurrentUser(user))
@@ -75,8 +74,6 @@ export default function CreateCardSet({ setCardSets, setNotification, existingCa
     if (flashcards.length < MAX_CARDS) {
       const newCard = { id: Date.now(), question: '', answer: '', image: null }
       setFlashcards([...flashcards, newCard])
-      // Initialize collapse state as expanded (false)
-      setCollapsedCards(prev => ({ ...prev, [newCard.id]: false }))
     } else {
       setNotification({ type: 'error', message: `Maximum of ${MAX_CARDS} cards allowed.` })
     }
@@ -90,15 +87,6 @@ export default function CreateCardSet({ setCardSets, setNotification, existingCa
 
   const removeFlashcard = (id: number) => {
     setFlashcards(flashcards.filter(card => card.id !== id))
-    setCollapsedCards(prev => {
-      const newState = { ...prev }
-      delete newState[id]
-      return newState
-    })
-  }
-
-  const toggleCollapse = (id: number) => {
-    setCollapsedCards(prev => ({ ...prev, [id]: !prev[id] }))
   }
 
   const saveFlashcards = async () => {
@@ -149,7 +137,6 @@ export default function CreateCardSet({ setCardSets, setNotification, existingCa
         setSetName('')
         setSetDescription('')
         setErrors({})
-        setCollapsedCards({})
       } else {
         throw new Error(result.error || 'Failed to save card set')
       }
@@ -169,34 +156,34 @@ export default function CreateCardSet({ setCardSets, setNotification, existingCa
   }
 
   return (
-    <div className="ml-64 mt-16 p-8 w-[calc(100%-16rem)] flex flex-col items-center">
-      <div className="w-full max-w-4xl">
+    <div className="ml-64 mt-16 p-8 w-[calc(100%-16rem)] flex flex-col items-center bg-gray-100">
+      <div className="w-full max-w-4xl space-y-8">
         {!currentUser && (
-          <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-6 py-4 rounded mb-6" role="alert">
-            <span className="text-xl">Please log in to create and save card sets.</span>
+          <div className="bg-yellow-50 border-l-4 border-yellow-500 text-yellow-800 p-4 rounded">
+            <p className="text-xl font-medium">Please log in to create and save card sets.</p>
           </div>
         )}
 
+        {/* Set Name */}
         <div className="space-y-4">
-          <Label htmlFor="set-name" className="text-xl text-cyan-700">Set Name (10 words max)</Label>
           <Input
             id="set-name"
             value={setName}
             onChange={e => setSetName(e.target.value)}
-            placeholder="Enter set name"
-            className="bg-white border-cyan-200 focus:border-cyan-500 focus:ring-cyan-500 transition-all duration-200 text-xl py-4 px-4"
+            placeholder="Enter a title, like Microeconomics - Chapter 512: What the fuck is demand"
+            className="bg-white border-none outline-none focus:outline-none focus:border-b-2 focus:border-[#0D005B] transition-all duration-200 text-xl py-4 px-4"
           />
           {errors['title'] && <p className="text-red-500 text-lg">{errors['title']}</p>}
         </div>
 
-        <div className="space-y-4 mt-6">
-          <Label htmlFor="set-description" className="text-xl text-cyan-700">Set Description (50 words max)</Label>
+        {/* Set Description */}
+        <div className="space-y-4">
           <Textarea
             id="set-description"
             value={setDescription}
             onChange={e => setSetDescription(e.target.value)}
-            placeholder="Enter set description"
-            className="bg-white border-cyan-200 focus:border-cyan-500 focus:ring-cyan-500 transition-all duration-200 text-xl py-4 px-4"
+            placeholder="Add a description"
+            className="bg-white border-none outline-none focus:outline-none focus:border-b-2 focus:border-[#0D005B] transition-all duration-200 text-xl py-4 px-4 resize-none"
           />
           {errors['description'] && <p className="text-red-500 text-lg">{errors['description']}</p>}
         </div>
@@ -208,7 +195,7 @@ export default function CreateCardSet({ setCardSets, setNotification, existingCa
           </p>
           <Button 
             onClick={addFlashcard} 
-            className="bg-cyan-600 hover:bg-cyan-700 text-white text-2xl py-4 px-6 transition-colors duration-200"
+            className="bg-white text-gray-700 text-2xl py-4 px-6 rounded-lg border border-gray-300 hover:bg-gray-100 transition-colors duration-200 flex items-center"
             disabled={flashcards.length >= MAX_CARDS || !currentUser}
           >
             <PlusIcon className="mr-3 h-8 w-8" />
@@ -216,69 +203,55 @@ export default function CreateCardSet({ setCardSets, setNotification, existingCa
           </Button>
         </div>
 
-        {/* List of Flashcards with Collapsible Headers */}
+        {/* List of Flashcards */}
         {flashcards.map((card, index) => (
-          <Card key={card.id} className="bg-white shadow-md hover:shadow-xl transition-shadow my-6">
-            <div className="flex items-center justify-between p-4 border-b">
-              <p className="text-lg font-bold text-gray-800">Card {index + 1}</p>
+          <Card key={card.id} className="bg-white shadow-md rounded-lg hover:shadow-xl transition-shadow my-6">
+            <div className="flex items-center justify-between p-4 bg-gray-50 border-b border-gray-300 rounded-t-lg">
+              <p className="text-xl font-bold text-gray-700">{index + 1}</p>
+              {/* Remove Button */}
               <Button
-                variant="secondary"
-                onClick={() => toggleCollapse(card.id)}
-                className="p-2"
-                title={collapsedCards[card.id] ? "Expand Card" : "Collapse Card"}
+                onClick={() => removeFlashcard(card.id)}
+                className="p-2 focus:outline-none border-0 text-gray-700 hover:text-gray-900 transition-colors duration-200"
+                title="Remove Card"
               >
-                {collapsedCards[card.id] ? (
-                  <ChevronDown className="w-5 h-5" />
-                ) : (
-                  <ChevronUp className="w-5 h-5" />
-                )}
+                <TrashIcon className="w-5 h-5" />
               </Button>
             </div>
-            {!collapsedCards[card.id] && (
-              <CardContent className="p-6 grid grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <Label htmlFor={`question-${card.id}`} className="text-xl text-cyan-700">Question (20 words max)</Label>
-                  <Input
-                    id={`question-${card.id}`}
-                    value={card.question}
-                    onChange={e => updateFlashcard(card.id, 'question', e.target.value)}
-                    placeholder="Enter the question"
-                    className="mt-1 bg-white border-cyan-200 focus:border-cyan-500 focus:ring-cyan-500 transition-all duration-200 text-xl py-4 px-4"
-                  />
-                  {errors[`cards.${card.id}.question`] && (
-                    <p className="text-red-500 text-lg">{errors[`cards.${card.id}.question`]}</p>
-                  )}
-                </div>
-                <div className="space-y-4">
-                  <Label htmlFor={`answer-${card.id}`} className="text-xl text-cyan-700">Answer (40 words max)</Label>
-                  <Input
-                    id={`answer-${card.id}`}
-                    value={card.answer}
-                    onChange={e => updateFlashcard(card.id, 'answer', e.target.value)}
-                    placeholder="Enter the answer"
-                    className="mt-1 bg-white border-cyan-200 focus:border-cyan-500 focus:ring-cyan-500 transition-all duration-200 text-xl py-4 px-4"
-                  />
-                  {errors[`cards.${card.id}.answer`] && (
-                    <p className="text-red-500 text-lg">{errors[`cards.${card.id}.answer`]}</p>
-                  )}
-                  <Button
-                    variant="destructive"
-                    onClick={() => removeFlashcard(card.id)}
-                    className="w-full mt-4 transition-colors duration-200 text-xl py-4"
-                  >
-                    <TrashIcon className="mr-3 h-6 w-6" />
-                    Remove Card
-                  </Button>
-                </div>
-              </CardContent>
-            )}
+            <CardContent className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <Input
+                  id={`question-${card.id}`}
+                  value={card.question}
+                  onChange={e => updateFlashcard(card.id, 'question', e.target.value)}
+                  placeholder="Enter term"
+                  className="bg-white border-none outline-none focus:outline-none focus:border-b-2 focus:border-yellow-500 transition-all duration-200 text-xl py-4 px-4"
+                />
+                <p className="text-sm text-gray-500">Term (20 words max)</p>
+                {errors[`cards.${card.id}.question`] && (
+                  <p className="text-red-500 text-lg">{errors[`cards.${card.id}.question`]}</p>
+                )}
+              </div>
+              <div className="space-y-4">
+                <Input
+                  id={`answer-${card.id}`}
+                  value={card.answer}
+                  onChange={e => updateFlashcard(card.id, 'answer', e.target.value)}
+                  placeholder="Enter definition"
+                  className="bg-white border-none outline-none focus:outline-none focus:border-b-2 focus:border-yellow-500 transition-all duration-200 text-xl py-4 px-4"
+                />
+                <p className="text-sm text-gray-500">Definition (40 words max)</p>
+                {errors[`cards.${card.id}.answer`] && (
+                  <p className="text-red-500 text-lg">{errors[`cards.${card.id}.answer`]}</p>
+                )}
+              </div>
+            </CardContent>
           </Card>
         ))}
 
-        <div className="flex justify-end mt-8">
+        <div className="flex justify-end">
           <Button 
             onClick={saveFlashcards} 
-            className="bg-green-600 hover:bg-green-700 text-white text-2xl py-6 px-10 transition-colors duration-200"
+            className="bg-green-600 hover:bg-green-700 text-white text-2xl py-6 px-10 rounded-lg transition-colors duration-200 flex items-center"
             disabled={!currentUser}
           >
             <SaveIcon className="mr-3 h-8 w-8" />

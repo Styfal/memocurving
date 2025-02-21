@@ -1,5 +1,4 @@
 
-
 import { Button } from "@/components/ui/button"
 import { PlusIcon, BookOpenIcon, BrainIcon } from 'lucide-react'
 
@@ -10,7 +9,7 @@ interface SidebarProps {
 
 export default function Sidebar({ currentPage, setCurrentPage }: SidebarProps) {
   return (
-    <div className="fixed top-16 left-0 w-64 h-[calc(100%-4rem)] bg-white shadow-md p-6">
+    <div className="fixed top-16 left-0 w-64 h-[calc(100%-4rem)] bg-gray-100 shadow-md p-6">
       <nav className="space-y-4">
         <Button
           variant={currentPage === 'create' ? 'default' : 'ghost'}
