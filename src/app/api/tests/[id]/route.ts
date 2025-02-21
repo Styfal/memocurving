@@ -1,5 +1,3 @@
-
-
 import { db } from '@/lib/firebase';
 import { doc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { NextResponse } from 'next/server';

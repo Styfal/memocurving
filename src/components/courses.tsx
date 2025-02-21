@@ -8,32 +8,93 @@ import { TrashIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 export function Courses() {
-  // Track the current user
+  // User and cardset state.
   const [user, loading, error] = useAuthState(auth);
   const [userCardsets, setUserCardsets] = useState<any[]>([]);
-  // Track which decks have already been used to create a test.
   const [testedDecks, setTestedDecks] = useState<string[]>([]);
   const router = useRouter();
 
-  // State to control the "View More" modal popup
+  // Modal states.
   const [showAllModal, setShowAllModal] = useState(false);
+  const [showTestOptions, setShowTestOptions] = useState(false);
+  const [selectedCardset, setSelectedCardset] = useState<any>(null);
 
-  // States for editing flashcards and deck details within a cardset:
+  // States for editing a cardset.
   const [editingCardset, setEditingCardset] = useState<any | null>(null);
   const [editedTitle, setEditedTitle] = useState("");
   const [editedDescription, setEditedDescription] = useState("");
   const [editedCards, setEditedCards] = useState<any[]>([]);
-  // Tracks which card rows are in “edit mode” (by index)
   const [editingIndices, setEditingIndices] = useState<number[]>([]);
 
-  // Fetch the cardsets created by the current user (using createdBy.uid)
+  // Updated helper: Safely truncate text to a maximum number of words.
+  function truncate(text: unknown, maxWords: number): string {
+    const str = typeof text === "string" ? text : "";
+    const words = str.split(/\s+/).filter(Boolean);
+    return words.length > maxWords ? words.slice(0, maxWords).join(" ") : str;
+  }
+
+  // Helper: Normalize strings for comparison.
+  const normalize = (str: string) => str.trim().toLowerCase();
+
+  // Helper: Shuffle an array.
+  const shuffleArray = (arr: any[]): any[] => {
+    const array = [...arr];
+    for (let i = array.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+  };
+
+  // Improved MCQ normalization function.
+  const fixMCQQuestions = (questions: any[]): any[] => {
+    return questions.map((q) => {
+      if (q.type === "mcq") {
+        // Ensure options exists and normalize them.
+        let options = Array.isArray(q.options) ? q.options : [];
+        const normCorrect = normalize(q.correctAnswer);
+        options = options.map(normalize);
+        // If the normalized correct answer is missing, add it.
+        if (!options.includes(normCorrect)) {
+          console.warn(`MCQ question missing correct answer in options: "${q.question}"`);
+          options.push(normCorrect);
+        }
+        // Remove duplicates.
+        options = Array.from(new Set(options));
+        // Ensure exactly 4 options.
+        if (options.length > 4) {
+          if (!options.slice(0, 4).includes(normCorrect)) {
+            options[3] = normCorrect;
+          }
+          options = options.slice(0, 4);
+        } else if (options.length < 4) {
+          while (options.length < 4) {
+            options.push("n/a");
+          }
+        }
+        return { ...q, correctAnswer: normCorrect, options };
+      }
+      return q;
+    });
+  };
+
+  // New helper: For all questions, fix missing correctAnswer in short-answer questions.
+  const fixAllQuestions = (questions: any[]): any[] => {
+    return questions.map((q) => {
+      if (q.type === "mcq") {
+        return fixMCQQuestions([q])[0];
+      } else if (q.type === "short-answer") {
+        return { ...q, correctAnswer: q.correctAnswer ?? "n/a" };
+      }
+      return q;
+    });
+  };
+
+  // Fetch the user's cardsets.
   useEffect(() => {
     if (user) {
       const fetchCardsets = async () => {
-        const q = query(
-          collection(db, "cardSets"),
-          where("createdBy.uid", "==", user.uid)
-        );
+        const q = query(collection(db, "cardSets"), where("createdBy.uid", "==", user.uid));
         const querySnapshot = await getDocs(q);
         const cardsets = querySnapshot.docs.map((doc) => ({
           id: doc.id,
@@ -41,27 +102,21 @@ export function Courses() {
         }));
         setUserCardsets(cardsets);
       };
-
       fetchCardsets();
     }
   }, [user]);
 
-  // Handler for deleting an entire flashcard deck.
+  // Delete a flashcard deck.
   const handleDelete = async (cardsetId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
-
     const confirmDelete = confirm("Are you sure you want to delete this flashcard deck?");
     if (!confirmDelete) return;
-
     try {
-      const response = await fetch(`/api/cardsets/${cardsetId}`, {
-        method: "DELETE",
-      });
+      const response = await fetch(`/api/cardsets/${cardsetId}`, { method: "DELETE" });
       const result = await response.json();
       if (result.success) {
-        setUserCardsets((prev) => prev.filter((cardset) => cardset.id !== cardsetId));
-        // Remove from testedDecks if needed.
+        setUserCardsets((prev) => prev.filter((cs) => cs.id !== cardsetId));
         setTestedDecks((prev) => prev.filter((id) => id !== cardsetId));
       } else {
         alert("Failed to delete flashcard deck: " + result.error);
@@ -72,33 +127,120 @@ export function Courses() {
     }
   };
 
-  // Modified handler for creating a test using the OpenAI API.
-  const handleCreateTest = async (cardset: any, e: React.MouseEvent) => {
+  // Opens the test options modal and stores the selected cardset.
+  const openTestOptions = (cardset: any, e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
-
     if (testedDecks.includes(cardset.id)) return;
+    setSelectedCardset(cardset);
+    setShowTestOptions(true);
+  };
 
-    // Updated prompt with explicit markers.
+  // Creates a basic test using flashcard content only.
+  const createBasicTest = async (cardset: any) => {
+    const allCards = cardset.cards || [];
+    // Filter out cards missing question or answer.
+    const validCards = allCards.filter((card: any) => card.question && card.answer);
+    let selectedCards: any[] = [];
+    if (validCards.length >= 15) {
+      selectedCards = shuffleArray(validCards).slice(0, 15);
+    } else {
+      selectedCards = [...validCards];
+      while (selectedCards.length < 15 && validCards.length > 0) {
+        selectedCards.push(validCards[Math.floor(Math.random() * validCards.length)]);
+      }
+    }
+    // Build questions while truncating texts to satisfy word limits.
+    const questions = selectedCards.map((card: any) => {
+      const questionText = truncate(card.question, 30);
+      const answerText = truncate(card.answer, 50);
+      const isMCQ = Math.random() < 0.5;
+      if (isMCQ) {
+        const otherAnswers = validCards
+          .filter((c: any) => c.answer !== card.answer)
+          .map((c: any) => truncate(c.answer, 50));
+        const wrongOptions = shuffleArray(otherAnswers).slice(0, 3);
+        while (wrongOptions.length < 3) {
+          wrongOptions.push("n/a");
+        }
+        const options = shuffleArray([answerText, ...wrongOptions]);
+        return {
+          type: "mcq",
+          question: questionText,
+          correctAnswer: answerText,
+          options,
+        };
+      } else {
+        return {
+          type: "short-answer",
+          question: questionText,
+          correctAnswer: answerText,
+        };
+      }
+    });
+
+    // Fix MCQs to ensure options include the correct answer.
+    const fixedQuestions = fixMCQQuestions(questions);
+
+    // Build the final payload with safe defaults.
+    const requestData = {
+      title: truncate(cardset.title, 10),
+      description: truncate(cardset.description, 50),
+      questions: fixedQuestions,
+      createdAt: new Date().toISOString(),
+      userId: user ? user.uid : "unknown",
+    };
+
+    console.log("🚀 Sending payload to /api/tests (Basic):", JSON.stringify(requestData, null, 2));
+
+    try {
+      const response = await fetch("/api/tests", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(requestData),
+      });
+      const result = await response.json();
+      if (response.ok && result.success) {
+        setTestedDecks((prev) => [...prev, cardset.id]);
+        router.push(`/tests/${result.data.id}`);
+      } else {
+        alert("Failed to create test: " + (result.error || "Unknown error"));
+      }
+    } catch (error) {
+      console.error("Error creating basic test:", error);
+      alert("An error occurred while creating the test.");
+    }
+  };
+
+  // Helper: Extract JSON between BEGIN_JSON and END_JSON markers.
+  function extractJsonFromMarkers(str: string): string | null {
+    const beginMarker = "BEGIN_JSON";
+    const endMarker = "END_JSON";
+    const startIndex = str.indexOf(beginMarker);
+    const endIndex = str.lastIndexOf(endMarker);
+    if (startIndex !== -1 && endIndex !== -1 && endIndex > startIndex) {
+      return str.substring(startIndex + beginMarker.length, endIndex).trim();
+    }
+    return null;
+  }
+
+  // Creates an AI-enhanced test using OpenAI.
+  const createAITest = async (cardset: any) => {
     const prompt = `
-You are an expert quiz generator. Given the following flashcard deck details:
+You are a distinguished professor preparing an exam. Based on the following syllabus details, generate exactly 15 exam questions that progressively increase in difficulty.
 
-Title: ${cardset.title}
-Description: ${cardset.description}
-Flashcards:
+Syllabus Title: ${cardset.title}
+Syllabus Description: ${cardset.description}
+Key Concepts (from flashcards):
 ${cardset.cards
   .map((card: any, index: number) => `${index + 1}. Q: ${card.question} | A: ${card.answer}`)
   .join("\n")}
 
-Generate a test consisting of exactly 15 questions that include a random mix of short answer and multiple choice (MCQ) questions in random order. Ensure:
-- The questions are on the topic of the flashcards.
-- The difficulty increases as the test progresses.
-- For MCQ questions, include 4 options with one correct answer.
-
-Do not include any text besides the JSON output.
-Please output your result in the following format (all on one line):
-
+Your exam should be a mix of short answer and multiple choice (MCQ) questions. For MCQs, provide 4 options with one correct answer.
+Output exactly one line that contains only a valid, minified JSON string wrapped by the markers as follows:
 BEGIN_JSON{"questions":[{"type":"mcq"|"short-answer","question":"<question text>","correctAnswer":"<correct answer>","options":["option1","option2","option3","option4"]}, ...]}END_JSON
+
+Do not include any additional text.
 `;
 
     try {
@@ -121,8 +263,8 @@ BEGIN_JSON{"questions":[{"type":"mcq"|"short-answer","question":"<question text>
       }
       console.log("Cleaned AI Content:", cleanedContent);
 
-      // Use the markers to extract the JSON substring.
       const jsonString = extractJsonFromMarkers(cleanedContent);
+      console.log("Extracted JSON string:", jsonString);
       if (!jsonString) {
         console.error("No JSON object found between markers.");
         alert("Received an invalid response from OpenAI.");
@@ -139,36 +281,18 @@ BEGIN_JSON{"questions":[{"type":"mcq"|"short-answer","question":"<question text>
         return;
       }
 
-      // Fix any MCQ question that doesn't have its correct answer in the options.
-      const fixedQuestions = testQuestions.map((q: any) => {
-        if (q.type === "mcq" && !q.options.includes(q.correctAnswer)) {
-          console.warn(`MCQ question missing correct answer in options: "${q.question}"`);
-          let newOptions = [...q.options, q.correctAnswer];
-          newOptions = Array.from(new Set(newOptions));
-          if (newOptions.length > 4) {
-            if (!newOptions.slice(0, 4).includes(q.correctAnswer)) {
-              newOptions[3] = q.correctAnswer;
-            }
-            newOptions = newOptions.slice(0, 4);
-          } else if (newOptions.length < 4) {
-            while (newOptions.length < 4) {
-              newOptions.push("N/A");
-            }
-          }
-          return { ...q, options: newOptions };
-        }
-        return q;
-      });
-
-      console.log("Fixed Questions:", fixedQuestions);
+      // Fix questions: normalize MCQs and fill in missing correctAnswer for short-answer questions.
+      const fixedQuestions = fixAllQuestions(testQuestions);
 
       const requestData = {
-        title: cardset.title,
-        description: cardset.description,
+        title: truncate(cardset.title, 10),
+        description: truncate(cardset.description, 50),
         questions: fixedQuestions,
         createdAt: new Date().toISOString(),
         userId: user ? user.uid : "unknown",
       };
+
+      console.log("🚀 Sending payload to /api/tests (AI):", JSON.stringify(requestData, null, 2));
 
       const response = await fetch("/api/tests", {
         method: "POST",
@@ -183,12 +307,12 @@ BEGIN_JSON{"questions":[{"type":"mcq"|"short-answer","question":"<question text>
         alert("Failed to create test: " + (result.error || "Unknown error"));
       }
     } catch (error) {
-      console.error("Error creating test:", error);
+      console.error("Error creating AI test:", error);
       alert("An error occurred while creating the test.");
     }
   };
 
-  // Open the edit modal for a specific cardset.
+  // Open the edit modal for a cardset.
   const openEditModal = (cardset: any) => {
     setEditingCardset(cardset);
     setEditedTitle(cardset.title);
@@ -197,7 +321,7 @@ BEGIN_JSON{"questions":[{"type":"mcq"|"short-answer","question":"<question text>
     setEditingIndices([]);
   };
 
-  // Update a card’s content in the editedCards state.
+  // Update a card’s content.
   const handleCardChange = (index: number, field: "question" | "answer", value: string) => {
     setEditedCards((prev) => {
       const updated = [...prev];
@@ -206,13 +330,13 @@ BEGIN_JSON{"questions":[{"type":"mcq"|"short-answer","question":"<question text>
     });
   };
 
-  // Remove a card from the editedCards array.
+  // Remove a card.
   const handleRemoveCard = (index: number) => {
     setEditedCards((prev) => prev.filter((_, i) => i !== index));
     setEditingIndices((prev) => prev.filter((i) => i !== index));
   };
 
-  // Save the changes made in the modal (deck details and cards) to the backend.
+  // Save changes to a cardset.
   const handleSaveChanges = async () => {
     if (!editingCardset) return;
     try {
@@ -250,14 +374,12 @@ BEGIN_JSON{"questions":[{"type":"mcq"|"short-answer","question":"<question text>
 
   return (
     <div className="w-full min-h-screen bg-background">
-      {/* Header with Logo */}
+      {/* Header */}
       <header className="py-12 px-4 md:px-6">
         <div className="container max-w-5xl mx-auto flex flex-col items-center">
-          {/* Logo */}
           <div className="flex items-center justify-center mb-4">
             <img src="/textless-logo.svg" alt="MemoCurve Logo" className="h-80 w-auto" />
           </div>
-          {/* Title & Subheading */}
           <div className="space-y-4 text-center">
             <h1 className="text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
               <span className="bg-cyan-500 text-white px-2">Explore</span> Flashcards
@@ -311,7 +433,7 @@ BEGIN_JSON{"questions":[{"type":"mcq"|"short-answer","question":"<question text>
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={(e) => handleCreateTest(cardset, e)}
+                          onClick={(e) => openTestOptions(cardset, e)}
                           disabled={testedDecks.includes(cardset.id)}
                         >
                           {testedDecks.includes(cardset.id) ? "Test Created" : "Create Test"}
@@ -338,7 +460,7 @@ BEGIN_JSON{"questions":[{"type":"mcq"|"short-answer","question":"<question text>
         </div>
       </main>
 
-      {/* View More Modal for All Decks */}
+      {/* Modal: View More Decks */}
       {showAllModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
           <div className="bg-background rounded-lg shadow-lg w-full max-w-3xl p-6 relative">
@@ -353,10 +475,7 @@ BEGIN_JSON{"questions":[{"type":"mcq"|"short-answer","question":"<question text>
             <div className="space-y-4">
               {userCardsets.length > 0 ? (
                 userCardsets.map((cardset) => (
-                  <div
-                    key={cardset.id}
-                    className="border rounded p-4 flex justify-between items-center"
-                  >
+                  <div key={cardset.id} className="border rounded p-4 flex justify-between items-center">
                     <div>
                       <h3 className="text-xl font-bold">{cardset.title}</h3>
                       <p className="text-muted-foreground">{cardset.description}</p>
@@ -368,7 +487,7 @@ BEGIN_JSON{"questions":[{"type":"mcq"|"short-answer","question":"<question text>
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={(e) => handleCreateTest(cardset, e)}
+                        onClick={(e) => openTestOptions(cardset, e)}
                         disabled={testedDecks.includes(cardset.id)}
                       >
                         {testedDecks.includes(cardset.id) ? "Test Created" : "Create Test"}
@@ -401,7 +520,43 @@ BEGIN_JSON{"questions":[{"type":"mcq"|"short-answer","question":"<question text>
         </div>
       )}
 
-      {/* Edit Deck Modal */}
+      {/* Modal: Test Options */}
+      {showTestOptions && selectedCardset && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+          <div className="bg-background rounded-lg shadow-lg w-full max-w-md p-6 relative">
+            <button
+              onClick={() => setShowTestOptions(false)}
+              className="absolute top-4 right-4 text-muted-foreground hover:text-primary"
+              title="Close"
+            >
+              &#10005;
+            </button>
+            <h2 className="text-2xl font-bold mb-4">Select Test Type</h2>
+            <p className="mb-4">Choose the test option you’d like to create:</p>
+            <div className="flex flex-col space-y-4">
+              <Button
+                onClick={() => {
+                  setShowTestOptions(false);
+                  createBasicTest(selectedCardset);
+                }}
+              >
+                Basic Test (Free)
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowTestOptions(false);
+                  createAITest(selectedCardset);
+                }}
+              >
+                AI‑Enhanced Test (Premium)
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Edit Cardset */}
       {editingCardset && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
           <div className="bg-background rounded-lg shadow-lg w-full max-w-lg p-6 relative">
@@ -444,35 +599,27 @@ BEGIN_JSON{"questions":[{"type":"mcq"|"short-answer","question":"<question text>
                             type="text"
                             placeholder="Question"
                             value={card.question}
-                            onChange={(e) =>
-                              handleCardChange(index, "question", e.target.value)
-                            }
+                            onChange={(e) => handleCardChange(index, "question", e.target.value)}
                             className="w-full p-2 border rounded mb-2 bg-white"
                           />
                           <input
                             type="text"
                             placeholder="Answer"
                             value={card.answer}
-                            onChange={(e) =>
-                              handleCardChange(index, "answer", e.target.value)
-                            }
+                            onChange={(e) => handleCardChange(index, "answer", e.target.value)}
                             className="w-full p-2 border rounded mb-2 bg-white"
                           />
                           <div className="flex space-x-2">
                             <Button
                               size="sm"
-                              onClick={() =>
-                                setEditingIndices((prev) => prev.filter((i) => i !== index))
-                              }
+                              onClick={() => setEditingIndices((prev) => prev.filter((i) => i !== index))}
                             >
                               Save
                             </Button>
                             <Button
                               size="sm"
                               variant="destructive"
-                              onClick={() =>
-                                setEditingIndices((prev) => prev.filter((i) => i !== index))
-                              }
+                              onClick={() => setEditingIndices((prev) => prev.filter((i) => i !== index))}
                             >
                               Cancel
                             </Button>
@@ -534,18 +681,6 @@ BEGIN_JSON{"questions":[{"type":"mcq"|"short-answer","question":"<question text>
       )}
     </div>
   );
-}
-
-// Helper function to extract JSON between BEGIN_JSON and END_JSON markers.
-function extractJsonFromMarkers(str: string): string | null {
-  const beginMarker = "BEGIN_JSON";
-  const endMarker = "END_JSON";
-  const startIndex = str.indexOf(beginMarker);
-  const endIndex = str.lastIndexOf(endMarker);
-  if (startIndex !== -1 && endIndex !== -1 && endIndex > startIndex) {
-    return str.substring(startIndex + beginMarker.length, endIndex).trim();
-  }
-  return null;
 }
 
 export default Courses;

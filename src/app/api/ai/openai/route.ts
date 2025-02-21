@@ -13,14 +13,12 @@ export async function POST(request: Request) {
       body: JSON.stringify({
         model: "gpt-3.5-turbo",
         messages: [{ role: "user", content: prompt }],
-        max_tokens: 800, // Increased token limit for detailed output
-        // Optionally, add a stop sequence if necessary:
-        // stop: ["\n"]
+        max_tokens: 800,
       }),
     });
 
     const data = await response.json();
-    console.log("OpenAI API Response:", data); // Log the full response for debugging.
+    console.log("OpenAI API Response:", data);
     return NextResponse.json(data);
   } catch (error) {
     console.error("Error calling OpenAI API:", error);
