@@ -15,7 +15,6 @@ export function Courses() {
   const router = useRouter();
 
   // Modal states.
-  const [showAllModal, setShowAllModal] = useState(false);
   const [showTestOptions, setShowTestOptions] = useState(false);
   const [selectedCardset, setSelectedCardset] = useState<any>(null);
 
@@ -50,18 +49,14 @@ export function Courses() {
   const fixMCQQuestions = (questions: any[]): any[] => {
     return questions.map((q) => {
       if (q.type === "mcq") {
-        // Ensure options exists and normalize them.
         let options = Array.isArray(q.options) ? q.options : [];
         const normCorrect = normalize(q.correctAnswer);
         options = options.map(normalize);
-        // If the normalized correct answer is missing, add it.
         if (!options.includes(normCorrect)) {
           console.warn(`MCQ question missing correct answer in options: "${q.question}"`);
           options.push(normCorrect);
         }
-        // Remove duplicates.
         options = Array.from(new Set(options));
-        // Ensure exactly 4 options.
         if (options.length > 4) {
           if (!options.slice(0, 4).includes(normCorrect)) {
             options[3] = normCorrect;
@@ -139,7 +134,6 @@ export function Courses() {
   // Creates a basic test using flashcard content only.
   const createBasicTest = async (cardset: any) => {
     const allCards = cardset.cards || [];
-    // Filter out cards missing question or answer.
     const validCards = allCards.filter((card: any) => card.question && card.answer);
     let selectedCards: any[] = [];
     if (validCards.length >= 15) {
@@ -150,7 +144,6 @@ export function Courses() {
         selectedCards.push(validCards[Math.floor(Math.random() * validCards.length)]);
       }
     }
-    // Build questions while truncating texts to satisfy word limits.
     const questions = selectedCards.map((card: any) => {
       const questionText = truncate(card.question, 30);
       const answerText = truncate(card.answer, 50);
@@ -179,10 +172,7 @@ export function Courses() {
       }
     });
 
-    // Fix MCQs to ensure options include the correct answer.
     const fixedQuestions = fixMCQQuestions(questions);
-
-    // Build the final payload with safe defaults.
     const requestData = {
       title: truncate(cardset.title, 10),
       description: truncate(cardset.description, 50),
@@ -281,9 +271,7 @@ Do not include any additional text.
         return;
       }
 
-      // Fix questions: normalize MCQs and fill in missing correctAnswer for short-answer questions.
       const fixedQuestions = fixAllQuestions(testQuestions);
-
       const requestData = {
         title: truncate(cardset.title, 10),
         description: truncate(cardset.description, 50),
@@ -375,33 +363,28 @@ Do not include any additional text.
   return (
     <div className="w-full min-h-screen bg-background">
       {/* Header */}
-      <header className="py-12 px-4 md:px-6">
-        <div className="container max-w-5xl mx-auto flex flex-col items-center">
-          <div className="flex items-center justify-center mb-4">
-            <img src="/textless-logo.svg" alt="MemoCurve Logo" className="h-80 w-auto" />
-          </div>
-          <div className="space-y-4 text-center">
+      <header className="py-6 px-4 md:px-6">
+        <div className="container max-w-5xl mx-auto">
+          <div className="flex items-center justify-center space-x-4 mb-2">
+            <img src="/memocurvelogo.svg" alt="MemoCurve Logo" className="h-40 w-auto" />
             <h1 className="text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
-              <span className="bg-cyan-500 text-white px-2">Explore</span> Flashcards
+              <span className="bg-[#0D005B] text-white px-2">Conduct</span> Flashcards
             </h1>
-            <p className="text-muted-foreground md:text-xl">Start Studying Efficiently</p>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="py-12 px-4 md:px-6">
+      <main className="py-6 px-4 md:px-6">
         <div className="container max-w-5xl mx-auto">
-          <section className="mb-12">
+          <section className="mb-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-2xl font-bold">Your Flashcard Decks</h2>
-              <Button variant="link" className="text-primary" onClick={() => setShowAllModal(true)}>
-                View More
-              </Button>
+              {/* "View More" button removed; now displaying all decks */}
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {userCardsets.length > 0 ? (
-                userCardsets.slice(0, 6).map((cardset) => (
+                userCardsets.map((cardset) => (
                   <div
                     key={cardset.id}
                     className="relative overflow-hidden rounded-lg shadow-lg group hover:shadow-xl hover:-translate-y-2 transition-transform duration-300 ease-in-out"
@@ -459,66 +442,6 @@ Do not include any additional text.
           </section>
         </div>
       </main>
-
-      {/* Modal: View More Decks */}
-      {showAllModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-          <div className="bg-background rounded-lg shadow-lg w-full max-w-3xl p-6 relative">
-            <button
-              onClick={() => setShowAllModal(false)}
-              className="absolute top-4 right-4 text-muted-foreground hover:text-primary"
-              title="Close"
-            >
-              &#10005;
-            </button>
-            <h2 className="text-2xl font-bold mb-4">All Your Flashcard Decks</h2>
-            <div className="space-y-4">
-              {userCardsets.length > 0 ? (
-                userCardsets.map((cardset) => (
-                  <div key={cardset.id} className="border rounded p-4 flex justify-between items-center">
-                    <div>
-                      <h3 className="text-xl font-bold">{cardset.title}</h3>
-                      <p className="text-muted-foreground">{cardset.description}</p>
-                    </div>
-                    <div className="flex space-x-2">
-                      <Link href={`/cards/${cardset.id}`}>
-                        <Button size="sm">Start</Button>
-                      </Link>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={(e) => openTestOptions(cardset, e)}
-                        disabled={testedDecks.includes(cardset.id)}
-                      >
-                        {testedDecks.includes(cardset.id) ? "Test Created" : "Create Test"}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openEditModal(cardset);
-                        }}
-                      >
-                        Edit Cards
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={(e) => handleDelete(cardset.id, e)}
-                      >
-                        <TrashIcon className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <p>No flashcard decks available.</p>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Modal: Test Options */}
       {showTestOptions && selectedCardset && (
