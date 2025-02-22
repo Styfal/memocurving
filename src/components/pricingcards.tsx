@@ -9,7 +9,7 @@ export function PricingCards() {
       <div className="container px-4 md:px-6">
         <div className="grid gap-4 md:gap-8">
           <div className="grid gap-2">
-            <h1 className="text-3xl font-bold text-center">Upgrade Plan</h1>
+            <h1 className="text-3xl font-bold text-center" style={{ color: '#0D005B' }}>Upgrade Plan</h1>
             <p className="text-muted-foreground text-center">
               Accelerate your learning even further with extension features!
             </p>

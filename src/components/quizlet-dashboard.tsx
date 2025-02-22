@@ -274,7 +274,7 @@ export function QuizletDashboard() {
         <h1 className="text-4xl font-bold mb-8 text-center" style={{ color: '#0D005B' }}>{userName}'s Dashboard</h1>
         
         {/* My Flashcard Sets Section */}
-        <Card>
+        {/* <Card>
           <CardHeader>
             <CardTitle className="flex items-center">
               <BookOpen className="mr-2" />
@@ -303,7 +303,7 @@ export function QuizletDashboard() {
               </div>
             )}
           </CardContent>
-        </Card>
+        </Card> */}
         
         {/* Your Portfolio Section */}
         <Card>
