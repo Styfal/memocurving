@@ -226,9 +226,10 @@ export default function CreateCardSet({ setCardSets, setNotification, existingCa
                   <Button
                     onClick={() => removeFlashcard(card.id)}
                     className="p-2 focus:outline-none border-0 text-gray-700 hover:text-gray-900 transition-colors duration-200"
-                    title="Remove Card"
+                            title="Remove Card"
+                            variant="ghost"
                   >
-                    <TrashIcon className="w-5 h-5" />
+                    <TrashIcon className="w-5 h-5"/>
                   </Button>
                 </div>
                 <CardContent className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
