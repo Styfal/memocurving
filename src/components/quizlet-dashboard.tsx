@@ -1,4 +1,6 @@
 
+
+
 'use client';
 
 import React, { useEffect, useState, ChangeEvent, useMemo } from 'react';
@@ -173,21 +175,6 @@ export function QuizletDashboard() {
     fetchUserData();
   }, [currentUser]);
 
-  // Handle avatar changes (temporarily commented out)
-  // const handleAvatarChange = (e: ChangeEvent<HTMLInputElement>) => {
-  //   const file = e.target.files?.[0];
-  //   if (file) {
-  //     const reader = new FileReader();
-  //     reader.onloadend = () => {
-  //       const result = reader.result;
-  //       if (typeof result === 'string') {
-  //         setUserAvatar(result);
-  //       }
-  //     };
-  //     reader.readAsDataURL(file);
-  //   }
-  // };
-
   // Save profile changes and close dialog
   const handleProfileSave = async () => {
     if (currentUser) {
@@ -264,6 +251,30 @@ export function QuizletDashboard() {
   // Get today's date string for comparison.
   const todayStr = new Date().toDateString();
 
+  // --- New Code for Review Today and Missed Reviews ---
+
+  // Calculate today's start and end timestamps.
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const todayEnd = new Date();
+  todayEnd.setHours(23, 59, 59, 999);
+
+  // Card sets with a next review scheduled for today.
+  const reviewDueToday = useMemo(() => {
+    return userCardSets.filter(cs => {
+      const nextReview = getNextReviewTime(cs.lastReviewed, cs.reviewCount);
+      return nextReview >= todayStart.getTime() && nextReview <= todayEnd.getTime();
+    });
+  }, [userCardSets]);
+
+  // Card sets whose next review date is past (i.e. missed reviews).
+  const missedReviews = useMemo(() => {
+    return userCardSets.filter(cs => {
+      const nextReview = getNextReviewTime(cs.lastReviewed, cs.reviewCount);
+      return nextReview < todayStart.getTime();
+    });
+  }, [userCardSets]);
+
   if (authLoading) return <div>Loading...</div>;
   if (!currentUser) return <div>Please log in to view your dashboard.</div>;
 
@@ -272,38 +283,6 @@ export function QuizletDashboard() {
       <div className="max-w-6xl mx-auto space-y-8">
         {/* Dashboard Header */}
         <h1 className="text-4xl font-bold mb-8 text-center" style={{ color: '#0D005B' }}>{userName}'s Dashboard</h1>
-        
-        {/* My Flashcard Sets Section */}
-        {/* <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <BookOpen className="mr-2" />
-              My Flashcard Sets
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {userCardSets.length === 0 ? (
-              <p>No flashcard sets found for your account.</p>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                {userCardSets.map((cs) => (
-                  <div
-                    key={cs.id}
-                    onClick={() => setSelectedSet(cs)}
-                    className="cursor-pointer transform hover:scale-105 transition"
-                  >
-                    <Card className="p-4">
-                      <CardTitle className="text-lg font-semibold">{cs.title}</CardTitle>
-                      <p className="text-sm text-gray-600">Last Reviewed: {formatDate(cs.lastReviewed)}</p>
-                      <p className="text-sm text-gray-600">Review Count: {cs.reviewCount}</p>
-                      <p className="text-sm text-gray-600">Next Review: {formatDate(getNextReviewTime(cs.lastReviewed, cs.reviewCount))}</p>
-                    </Card>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card> */}
         
         {/* Your Portfolio Section */}
         <Card>
@@ -339,21 +318,6 @@ export function QuizletDashboard() {
                         <Label htmlFor="bio" className="text-right">Bio</Label>
                         <Textarea id="bio" value={userBio} onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setUserBio(e.target.value)} className="col-span-3" />
                       </div>
-                      {/* Avatar upload is temporarily commented out */}
-                      {/*
-                      <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="picture" className="text-right">Picture</Label>
-                        <div className="col-span-3">
-                          <Label htmlFor="picture" className="cursor-pointer">
-                            <div className="flex items-center space-x-2 border rounded p-2">
-                              <Upload className="h-4 w-4" />
-                              <span>Upload new picture</span>
-                            </div>
-                          </Label>
-                          <Input id="picture" type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
-                        </div>
-                      </div>
-                      */}
                     </div>
                     <Button onClick={handleProfileSave}>Save changes</Button>
                   </DialogContent>
@@ -520,6 +484,45 @@ export function QuizletDashboard() {
             </Dialog>
           </CardContent>
         </Card>
+
+        {/* New Section: Review Sessions Overview */}
+        <div className="mt-8">
+          <Card>
+            <CardHeader>
+              <CardTitle>Review Sessions Overview</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Column for Today's Reviews */}
+                <div>
+                  <h3 className="text-xl font-semibold mb-2">Review Today</h3>
+                  {reviewDueToday.length === 0 ? (
+                    <p className="text-gray-500">No reviews scheduled for today.</p>
+                  ) : (
+                    <ul className="list-disc pl-5">
+                      {reviewDueToday.map(cs => (
+                        <li key={cs.id} className="text-blue-600">{cs.title}</li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+                {/* Column for Missed Reviews */}
+                <div>
+                  <h3 className="text-xl font-semibold mb-2">Missed Reviews</h3>
+                  {missedReviews.length === 0 ? (
+                    <p className="text-gray-500">No missed reviews.</p>
+                  ) : (
+                    <ul className="list-disc pl-5">
+                      {missedReviews.map(cs => (
+                        <li key={cs.id} className="text-red-600">{cs.title}</li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       {/* Flashcard Set Details Dialog */}
