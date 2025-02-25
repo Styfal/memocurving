@@ -80,38 +80,51 @@
 //   const [flashReviewToday, setFlashReviewToday] = React.useState(false);
 //   const [flashMissedReviews, setFlashMissedReviews] = React.useState(false);
 
-//   // Fetch card sets if user is authenticated
+//   // Function to fetch card sets from the API
+//   const fetchCardSets = async () => {
+//     try {
+//       const res = await fetch('/api/cardsets');
+//       const json = await res.json();
+//       if (json.success && json.data) {
+//         setCardSets(json.data);
+//       } else {
+//         console.error('No card sets returned from API.');
+//       }
+//     } catch (error) {
+//       console.error('Error fetching card sets:', error);
+//     }
+//   };
+
+//   // Fetch card sets on mount and whenever the user is authenticated.
 //   React.useEffect(() => {
 //     if (user) {
-//       (async () => {
-//         try {
-//           const res = await fetch('/api/cardsets');
-//           const json = await res.json();
-//           if (json.success && json.data) {
-//             setCardSets(json.data);
-//           } else {
-//             console.error('No card sets returned from API.');
-//           }
-//         } catch (error) {
-//           console.error('Error fetching card sets:', error);
-//         }
-//       })();
+//       fetchCardSets();
 //     }
 //   }, [user]);
 
-//   // Filter card sets for current user
+//   // Also periodically refresh the card sets (every minute) so that if a cardset is reviewed or the date changes, our lists update.
+//   React.useEffect(() => {
+//     if (user) {
+//       const interval = setInterval(() => {
+//         fetchCardSets();
+//       }, 60000);
+//       return () => clearInterval(interval);
+//     }
+//   }, [user]);
+
+//   // Filter card sets for current user.
 //   const userCardSets = React.useMemo(() => {
 //     return user ? cardSets.filter((cs) => cs.createdBy && cs.createdBy.uid === user.uid) : [];
 //   }, [cardSets, user]);
 
-//   // Utility function: getNextReviewTime
+//   // Utility function: getNextReviewTime.
 //   const getNextReviewTime = (lastReviewed: number, reviewCount: number): number => {
 //     const msPerDay = 1000 * 60 * 60 * 24;
 //     if (lastReviewed === 0) return Date.now() + msPerDay;
 //     return lastReviewed + (reviewCount + 1) * msPerDay;
 //   };
 
-//   // Calculate today's start and end timestamps
+//   // Calculate today's start and end timestamps.
 //   const todayStart = new Date();
 //   todayStart.setHours(0, 0, 0, 0);
 //   const todayEnd = new Date();
@@ -133,17 +146,29 @@
 //     });
 //   }, [userCardSets]);
 
-//   // Show notifications immediately on app load if conditions apply.
+//   // Update the "Review Today" notification whenever reviewDueToday changes.
 //   React.useEffect(() => {
 //     if (reviewDueToday.length > 0) {
 //       setShowReviewToday(true);
+//       setFlashReviewToday(false);
+//     } else {
+//       setShowReviewToday(false);
+//       setFlashReviewToday(false);
 //     }
+//   }, [reviewDueToday]);
+
+//   // Update the "Missed Reviews" notification whenever missedReviews changes.
+//   React.useEffect(() => {
 //     if (missedReviews.length > 0) {
 //       setShowMissedReviews(true);
+//       setFlashMissedReviews(false);
+//     } else {
+//       setShowMissedReviews(false);
+//       setFlashMissedReviews(false);
 //     }
-//   }, [reviewDueToday, missedReviews]);
+//   }, [missedReviews]);
 
-//   // Trigger flash effect after 5 minutes if not dismissed
+//   // Trigger flash effect after 5 minutes if a notification is still visible.
 //   React.useEffect(() => {
 //     let flashTimeout1: NodeJS.Timeout;
 //     if (showReviewToday) {
@@ -449,6 +474,7 @@
 
 
 
+
 'use client';
 
 import * as React from 'react';
@@ -548,16 +574,6 @@ export default function Navbar() {
   React.useEffect(() => {
     if (user) {
       fetchCardSets();
-    }
-  }, [user]);
-
-  // Also periodically refresh the card sets (every minute) so that if a cardset is reviewed or the date changes, our lists update.
-  React.useEffect(() => {
-    if (user) {
-      const interval = setInterval(() => {
-        fetchCardSets();
-      }, 60000);
-      return () => clearInterval(interval);
     }
   }, [user]);
 
