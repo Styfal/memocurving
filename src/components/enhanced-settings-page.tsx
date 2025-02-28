@@ -1,5 +1,3 @@
-
-
 "use client"
 
 import React, { useState, useEffect, ChangeEvent, FormEvent } from "react";
@@ -8,7 +6,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Eye, EyeOff, Moon, Sun, Upload, Github, Mail, Facebook } from "lucide-react";
@@ -30,6 +35,16 @@ export function EnhancedSettingsPageComponent() {
   const [language, setLanguage] = useState("english");
   const [profileImage, setProfileImage] = useState("/placeholder.svg?height=100&width=100");
   const [username, setUsername] = useState("");
+  // New state for in‑app notifications
+  const [pushNotificationsEnabled, setPushNotificationsEnabled] = useState(true);
+
+  // Load pushNotificationsEnabled from localStorage on mount
+  useEffect(() => {
+    const stored = localStorage.getItem("pushNotificationsEnabled");
+    if (stored !== null) {
+      setPushNotificationsEnabled(JSON.parse(stored));
+    }
+  }, []);
 
   // Load settings from Firestore when the component mounts
   useEffect(() => {
@@ -67,7 +82,7 @@ export function EnhancedSettingsPageComponent() {
           isProfileVisible: true,
           language: "english",
           profileImage: "/placeholder.svg?height=100&width=100",
-          name: ""
+          name: "",
         });
       }
     };
@@ -117,6 +132,12 @@ export function EnhancedSettingsPageComponent() {
     setIsProfileVisible(visible);
     const docRef = doc(db, "users", userId);
     await updateDoc(docRef, { isProfileVisible: visible });
+  };
+
+  // Handle in‑app notification toggle change
+  const handlePushNotificationsChange = (checked: boolean) => {
+    setPushNotificationsEnabled(checked);
+    localStorage.setItem("pushNotificationsEnabled", JSON.stringify(checked));
   };
 
   // Handle account form submission (currently for username only)
@@ -169,6 +190,12 @@ export function EnhancedSettingsPageComponent() {
                 <div className="space-y-2">
                   <Label htmlFor="bio">Bio</Label>
                   <Input id="bio" placeholder="Tell us about yourself" />
+                </div>
+                {/* Dark mode toggle now appears only in the Profile tab */}
+                <div className="flex items-center space-x-2">
+                  <Switch id="dark-mode" checked={isDarkMode} onCheckedChange={toggleDarkMode} />
+                  <Label htmlFor="dark-mode">Dark Mode</Label>
+                  {isDarkMode ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
                 </div>
               </div>
             </TabsContent>
@@ -250,8 +277,12 @@ export function EnhancedSettingsPageComponent() {
                   <Label htmlFor="email-notifications">Email Notifications</Label>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Switch id="push-notifications" />
-                  <Label htmlFor="push-notifications">Push Notifications</Label>
+                  <Switch 
+                    id="push-notifications" 
+                    checked={pushNotificationsEnabled} 
+                    onCheckedChange={handlePushNotificationsChange} 
+                  />
+                  <Label htmlFor="push-notifications">In‑App Notification</Label>
                 </div>
               </div>
             </TabsContent>
@@ -282,12 +313,8 @@ export function EnhancedSettingsPageComponent() {
             </TabsContent>
           </Tabs>
         </CardContent>
-        <CardFooter className="flex justify-between">
-          <div className="flex items-center space-x-2">
-            <Switch id="dark-mode" checked={isDarkMode} onCheckedChange={toggleDarkMode} />
-            <Label htmlFor="dark-mode">Dark Mode</Label>
-            {isDarkMode ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
-          </div>
+        <CardFooter className="flex justify-end">
+          {/* Only profile visibility toggle remains here */}
           <div className="flex items-center space-x-2">
             {isProfileVisible ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
             <span className="text-sm text-muted-foreground">

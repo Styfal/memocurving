@@ -1,8 +1,3 @@
-
-
-
-
-
 'use client';
 
 import * as React from 'react';
@@ -72,7 +67,7 @@ export default function Navbar() {
   const navInactiveClasses = 'bg-transparent text-black';
   const pricingInactiveClasses = 'bg-primary text-primary-foreground hover:bg-primary/90';
 
-  // --- New Code for Review Sessions Notifications ---
+  // --- Code for Review Sessions Notifications ---
 
   // State for storing card sets fetched from the API
   const [cardSets, setCardSets] = React.useState<CardSet[]>([]);
@@ -82,6 +77,15 @@ export default function Navbar() {
   // States to control flash effect (after 5 minutes)
   const [flashReviewToday, setFlashReviewToday] = React.useState(false);
   const [flashMissedReviews, setFlashMissedReviews] = React.useState(false);
+
+  // Load the in‑app notifications setting from localStorage (set via settings page)
+  const [notificationsEnabled, setNotificationsEnabled] = React.useState(true);
+  React.useEffect(() => {
+    const stored = localStorage.getItem("pushNotificationsEnabled");
+    if (stored !== null) {
+      setNotificationsEnabled(JSON.parse(stored));
+    }
+  }, []);
 
   // Function to fetch card sets from the API
   const fetchCardSets = async () => {
@@ -374,7 +378,7 @@ export default function Navbar() {
       </nav>
 
       {/* Popup Notifications for Review Sessions */}
-      {((showReviewToday && reviewDueToday.length > 0) ||
+      {notificationsEnabled && ((showReviewToday && reviewDueToday.length > 0) ||
         (showMissedReviews && missedReviews.length > 0)) && (
         <div className="fixed" style={{ top: '70px', right: '20px', zIndex: 1000 }}>
           {showReviewToday && reviewDueToday.length > 0 && (
