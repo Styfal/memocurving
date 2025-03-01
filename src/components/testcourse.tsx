@@ -1,9 +1,3 @@
-
-
-
-
-
-
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useAuthState } from "react-firebase-hooks/auth";
@@ -169,7 +163,7 @@ export default function TestCourse() {
                 userTestsets.map((testset) => (
                   <div
                     key={testset.id}
-                    className="relative overflow-hidden rounded-lg shadow-lg group hover:shadow-xl hover:-translate-y-2 transition-transform duration-300 ease-in-out cursor-pointer flex flex-col h-full"
+                    className="relative overflow-hidden rounded-lg shadow-lg group hover:shadow-xl hover:-translate-y-2 transition-transform duration-300 ease-in-out cursor-pointer flex flex-col w-80 h-48"
                     onClick={() => cycleTestFlag(testset.id)}
                   >
                     {/* Left flag marker */}
