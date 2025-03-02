@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { collection, query, where, getDocs } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 interface ContentManagementProps {
   setNotification: React.Dispatch<React.SetStateAction<{ type: 'success' | 'error'; message: string } | null>>;
@@ -11,17 +13,34 @@ interface ContentManagementProps {
 export default function ContentManagement({ 
   setNotification 
 }: ContentManagementProps) {
-  const [contentType, setContentType] = useState<'cards' | 'tests'>('cards');
+  // Updated state type and default value to match Firestore collection 'cardSets'
+  const [contentType, setContentType] = useState<'cardSets' | 'tests'>('cardSets');
   const [searchTerm, setSearchTerm] = useState('');
 
-  const handleSearch = () => {
+  const handleSearch = async () => {
     try {
-      // Simulated search logic
+      // Reference the correct Firestore collection based on contentType
+      const collectionRef = collection(db, contentType);
+      
+      // Build a query based on a field. Adjust the field name (e.g., 'title') to match your data.
+      const q = query(collectionRef, where("title", "==", searchTerm));
+
+      const querySnapshot = await getDocs(q);
+      let resultsCount = querySnapshot.size;
+
+      // Example: Notify the user about the number of results found
       setNotification({
         type: 'success',
-        message: `Searched for ${contentType} with term: ${searchTerm}`
+        message: `Found ${resultsCount} ${contentType} for "${searchTerm}".`
       });
+      
+      // Process the results if needed
+      querySnapshot.forEach((doc) => {
+        console.log(doc.id, " => ", doc.data());
+      });
+      
     } catch (error) {
+      console.error("Error searching:", error);
       setNotification({
         type: 'error',
         message: 'Search failed'
@@ -34,10 +53,10 @@ export default function ContentManagement({
       <div className="flex space-x-4">
         <select 
           value={contentType}
-          onChange={(e) => setContentType(e.target.value as 'cards' | 'tests')}
+          onChange={(e) => setContentType(e.target.value as 'cardSets' | 'tests')}
           className="p-2 border rounded"
         >
-          <option value="cards">Card Sets</option>
+          <option value="cardSets">Card Sets</option>
           <option value="tests">Test Sets</option>
         </select>
         <Input 
