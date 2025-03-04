@@ -1,3 +1,7 @@
+
+
+
+
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useAuthState } from "react-firebase-hooks/auth";
@@ -171,6 +175,12 @@ export default function TestCourse() {
                       className="absolute top-0 left-0 h-full w-1"
                       style={{ backgroundColor: testFlagColors[testset.id] || "transparent" }}
                     />
+                    {/* Completed Test Indicator */}
+                    {testset.completed && (
+                      <div className="absolute top-2 left-4 bg-green-500 text-white text-xs px-1 py-0.5 rounded">
+                        Completed
+                      </div>
+                    )}
                     {/* Image placeholder removed */}
                     <Link
                       href={`/tests/${testset.id}`}
