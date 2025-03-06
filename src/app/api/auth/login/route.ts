@@ -1,6 +1,8 @@
+
+
 import { NextRequest, NextResponse } from 'next/server';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 
 export async function POST(request: NextRequest) {
@@ -13,10 +15,22 @@ export async function POST(request: NextRequest) {
 
     console.log('User logged in:', user);
 
-    // Update last login time
-    await setDoc(doc(db, 'users', user.uid), {
-      lastLogin: Date.now()
-    }, { merge: true });
+    // Get the user's document to check for an existing isPremium field
+    const userDocRef = doc(db, 'users', user.uid);
+    const userDocSnap = await getDoc(userDocRef);
+
+    if (!userDocSnap.exists() || userDocSnap.data().isPremium === undefined) {
+      // Create the field if not present
+      await setDoc(userDocRef, {
+        lastLogin: Date.now(),
+        isPremium: false
+      }, { merge: true });
+    } else {
+      // Update only the last login time, leaving isPremium unchanged
+      await updateDoc(userDocRef, {
+        lastLogin: Date.now()
+      });
+    }
 
     return NextResponse.json({
       message: 'Login successful',
@@ -46,4 +60,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-

@@ -1,3 +1,5 @@
+
+
 import { NextRequest, NextResponse } from 'next/server';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
@@ -12,7 +14,7 @@ export async function POST(request: NextRequest) {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
 
-    // Save additional user data to Firestore
+    // Save additional user data to Firestore with isPremium defaulted to false
     await setDoc(doc(db, 'users', user.uid), {
       uid: user.uid,
       email: user.email,
@@ -20,6 +22,7 @@ export async function POST(request: NextRequest) {
       password: password, 
       createdAt: Date.now(),
       lastLogin: Date.now(),
+      isPremium: false // default to free user
     });
 
     return NextResponse.json({

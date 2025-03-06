@@ -1,3 +1,5 @@
+
+
 import { NextRequest, NextResponse } from 'next/server';
 import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
@@ -9,13 +11,14 @@ export async function POST(request: NextRequest) {
     const userCredential = await signInWithPopup(auth, provider);
     const user = userCredential.user;
 
-    // Save/update user data
+    // Save/update user data with isPremium defaulted to false if not already set
     await setDoc(doc(db, 'users', user.uid), {
       uid: user.uid,
       email: user.email,
       name: user.displayName,
       photoURL: user.photoURL,
-      lastLogin: Date.now()
+      lastLogin: Date.now(),
+      isPremium: false // default to free user
     }, { merge: true });
 
     return NextResponse.json({ 

@@ -1,7 +1,16 @@
-import { db } from '@/lib/firebase';
-import { doc, getDoc, deleteDoc, updateDoc } from 'firebase/firestore';
+import { 
+  doc, 
+  getDoc, 
+  deleteDoc, 
+  updateDoc, 
+  collection, 
+  query, 
+  where, 
+  getDocs 
+} from 'firebase/firestore';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
+import { db } from '@/lib/firebase';
 
 // Flashcard schema remains for the cards array.
 const FlashcardSchema = z.object({
@@ -33,10 +42,25 @@ const UpdateCardSetSchema = z.object({
     .refine(val => val.split(/\s+/).filter(Boolean).length <= 50, {
       message: "Description must be at most 50 words.",
     }),
-  cards: z.array(FlashcardSchema).max(20),
+  cards: z.array(FlashcardSchema),
   lastReviewed: z.number(), // Expect a timestamp (in ms)
   reviewCount: z.number(),
 });
+
+// Helper function to notify the user (only once every 12 hours)
+async function notifyUser(userId: string) {
+  const userRef = doc(db, 'users', userId);
+  const userSnap = await getDoc(userRef);
+  const userData = userSnap.data();
+  const lastNotification = userData?.lastDeletionNotification || 0;
+  const now = Date.now();
+  // 12 hours = 43200000 ms
+  if (now - lastNotification > 43200000) {
+    console.log(`Notify user ${userId} to delete excess cardsets.`);
+    await updateDoc(userRef, { lastDeletionNotification: now });
+    // Insert integration with your notification service here.
+  }
+}
 
 // GET: Retrieve a single card set by ID.
 export async function GET(req: Request, { params }: { params: { id: string } }) {
@@ -69,8 +93,26 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
   try {
     const body = await req.json();
     const validatedData = UpdateCardSetSchema.parse(body);
-    const cardsetDoc = doc(db, 'cardSets', params.id);
-    await updateDoc(cardsetDoc, {
+
+    // Fetch the existing card set to get the creator's uid.
+    const cardsetRef = doc(db, 'cardSets', params.id);
+    const cardsetSnap = await getDoc(cardsetRef);
+    if (!cardsetSnap.exists()) {
+      return NextResponse.json({ success: false, error: 'Card set not found' }, { status: 404 });
+    }
+    const cardsetData = cardsetSnap.data();
+    const createdByUid = cardsetData.createdBy?.uid;
+    if (!createdByUid) {
+      return NextResponse.json({ success: false, error: 'Creator information missing' }, { status: 400 });
+    }
+
+    // Fetch the user's premium status
+    const userDocSnap = await getDoc(doc(db, 'users', createdByUid));
+    const userData = userDocSnap.data();
+    const isPremium = userData?.isPremium || false;
+
+    // Proceed with the update (individual cardset update does not affect overall count)
+    await updateDoc(cardsetRef, {
       title: validatedData.title,
       description: validatedData.description,
       cards: validatedData.cards,
@@ -78,6 +120,20 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
       reviewCount: validatedData.reviewCount,
       updatedAt: new Date().toISOString(),
     });
+
+    // After update, if the user is free, check overall number of cardsets.
+    if (!isPremium) {
+      const userCardSetsQuery = query(
+        collection(db, 'cardSets'),
+        where("createdBy.uid", "==", createdByUid)
+      );
+      const userCardSetsSnapshot = await getDocs(userCardSetsQuery);
+      const totalCardSets = userCardSetsSnapshot.size;
+      if (totalCardSets > 20) {
+        await notifyUser(createdByUid);
+      }
+    }
+
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error updating cardset:', error);
