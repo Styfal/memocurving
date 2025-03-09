@@ -1,6 +1,4 @@
 
-
-
 // 'use client';
 
 // import React, { useEffect, useState, ChangeEvent, useMemo, useRef } from 'react';
@@ -140,9 +138,8 @@
 //   const [selectedReviewSets, setSelectedReviewSets] = useState<CardSet[]>([]);
 //   const [showReviewDialog, setShowReviewDialog] = useState(false);
 
-//   // --- NEW STATE for Email Trigger ---
-//   const [email, setEmail] = useState('');
-//   const [emailStatus, setEmailStatus] = useState<string | null>(null);
+//   // State for test email status
+//   const [testEmailStatus, setTestEmailStatus] = useState<string | null>(null);
 
 //   // Auth listener
 //   useEffect(() => {
@@ -254,32 +251,72 @@
 
 //   const todayStr = new Date().toDateString();
 
-//   // --- NEW Function for Sending Email ---
-//   const sendEmail = async () => {
-//     setEmailStatus('Sending...');
+//   // Helper: Build email content exactly as shown in "Review Sessions Overview"
+//   const buildEmailContent = () => {
+//     const today = new Date();
+//     today.setHours(0, 0, 0, 0);
+//     const todayStart = today.getTime();
+//     const todayEnd = todayStart + 86400000;
+
+//     const reviewToday = userCardSets.filter(cs => {
+//       const nextReview = getNextReviewTime(cs.lastReviewed, cs.reviewCount);
+//       return nextReview >= todayStart && nextReview <= todayEnd;
+//     });
+
+//     const missedReviews = userCardSets.filter(cs => {
+//       const nextReview = getNextReviewTime(cs.lastReviewed, cs.reviewCount);
+//       return nextReview < todayStart;
+//     });
+
+//     let content = "Review Sessions Overview:\n\nReview Today:\n";
+//     if (reviewToday.length === 0) {
+//       content += "No reviews scheduled for today.\n";
+//     } else {
+//       reviewToday.forEach(cs => {
+//         content += `- ${cs.title}\n`;
+//       });
+//     }
+//     content += "\nMissed Reviews:\n";
+//     if (missedReviews.length === 0) {
+//       content += "No missed reviews.\n";
+//     } else {
+//       missedReviews.forEach(cs => {
+//         content += `- ${cs.title}\n`;
+//       });
+//     }
+//     return content;
+//   };
+
+//   // Handler for sending test email immediately (override scheduled time)
+//   const sendEmailNow = async () => {
+//     if (!currentUser) return;
+//     setTestEmailStatus('Sending...');
 //     try {
+//       // Build email content from the already available data
+//       const emailContent = buildEmailContent();
+//       // Use the current user's email from the auth object
+//       const email = currentUser.email;
 //       const response = await fetch('/api/send-email', {
 //         method: 'POST',
 //         headers: { 'Content-Type': 'application/json' },
 //         body: JSON.stringify({
-//           to: email,
-//           subject: 'Hello from Next.js',
-//           text: 'This email was triggered from our Next.js app!',
+//           email, 
+//           emailContent,
+//           override: true,
 //         }),
 //       });
 //       const data = await response.json();
 //       if (response.ok) {
-//         setEmailStatus('Email sent successfully!');
+//         setTestEmailStatus('Email sent successfully!');
 //       } else {
-//         setEmailStatus(`Error: ${data.error}`);
+//         setTestEmailStatus(`Error: ${data.error || data.message}`);
 //       }
 //     } catch (error) {
-//       console.error('Error sending email:', error);
-//       setEmailStatus('Error sending email.');
+//       console.error('Error sending email now:', error);
+//       setTestEmailStatus('Error sending email now.');
 //     }
 //   };
 
-//   // Render the Dashboard UI.
 //   if (authLoading) return <div>Loading...</div>;
 //   if (!currentUser) return <div>Please log in to view your dashboard.</div>;
 
@@ -290,7 +327,7 @@
 //         <h1 className="text-4xl font-bold mb-8 text-center" style={{ color: '#0D005B' }}>
 //           {userName}'s Dashboard
 //         </h1>
-//         {/* Existing Portfolio, Profile, and Calendar Sections */}
+//         {/* Portfolio, Profile, and Calendar Sections */}
 //         <Card>
 //           <CardContent className="p-6">
 //             <div className="flex flex-col md:flex-row gap-6">
@@ -528,18 +565,22 @@
 //           </CardContent>
 //         </Card>
 
-//         {/* --- NEW Section: Email Trigger UI --- */}
-//         <div className="mt-8 p-4 border rounded bg-white">
-//           <h2 className="text-xl font-bold mb-2">Send an Email</h2>
-//           <Input
-//             type="email"
-//             placeholder="Enter email address"
-//             value={email}
-//             onChange={(e) => setEmail(e.target.value)}
-//           />
-//           <Button onClick={sendEmail} className="mt-2">Send Email</Button>
-//           {emailStatus && <p className="mt-2">{emailStatus}</p>}
-//         </div>
+//         {/* Note about automated email notifications */}
+//         <Card>
+//           <CardContent className="p-4">
+//             <p className="text-xl">
+//               Email notifications are automatically sent to your registered email at 21:30 local time.
+//             </p>
+//           </CardContent>
+//         </Card>
+
+//         {/* New Section: Test Email Trigger */}
+//         <Card>
+//           <CardContent className="p-4">
+//             <Button onClick={sendEmailNow}>Send Email Now</Button>
+//             {testEmailStatus && <p className="mt-2">{testEmailStatus}</p>}
+//           </CardContent>
+//         </Card>
 //       </div>
 
 //       {/* Flashcard Set Details Dialog */}
@@ -575,9 +616,9 @@ import { Progress } from '@/components/ui/progress';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { BookOpen, Users, Upload, ArrowLeft, ArrowRight } from 'lucide-react';
+import { BookOpen, ArrowLeft, ArrowRight } from 'lucide-react';
 import { auth, db } from '@/lib/firebase';
-import { doc, getDoc, updateDoc, getDocs, collection } from 'firebase/firestore';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 
 //
@@ -591,36 +632,12 @@ const formatDate = (timestamp: number | undefined): string => {
   return new Date(timestamp).toLocaleDateString(undefined, options);
 };
 
-const daysSinceReview = (lastReviewed: number): number => {
-  const msPerDay = 1000 * 60 * 60 * 24;
-  if (lastReviewed === 0) return 0;
-  return (Date.now() - lastReviewed) / msPerDay;
-};
-
-const calculateRetention = (days: number, reviewCount: number): number => {
-  return 100 * Math.pow(0.8, days / (1 + reviewCount));
-};
-
 const getNextReviewTime = (lastReviewed: number, reviewCount: number): number => {
   const msPerDay = 1000 * 60 * 60 * 24;
   if (lastReviewed === 0) return Date.now() + msPerDay;
   return lastReviewed + (reviewCount + 1) * msPerDay;
 };
 
-const getTomorrowRange = () => {
-  const today = new Date();
-  const tomorrowStart = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
-  const tomorrowEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 2);
-  return { start: tomorrowStart.getTime(), end: tomorrowEnd.getTime() };
-};
-
-interface CalendarCell {
-  day: number;
-  date: Date;
-  setsDue: CardSet[];
-}
-
-// Build calendar data for the given month and card sets.
 const getCalendarData = (sets: CardSet[], displayDate: Date): (CalendarCell | null)[][] => {
   const year = displayDate.getFullYear();
   const month = displayDate.getMonth();
@@ -660,6 +677,12 @@ const getCalendarData = (sets: CardSet[], displayDate: Date): (CalendarCell | nu
 //
 // Main Component
 //
+
+interface CalendarCell {
+  day: number;
+  date: Date;
+  setsDue: CardSet[];
+}
 
 interface CardSet {
   id: string;
@@ -702,9 +725,6 @@ export function QuizletDashboard() {
   // Review badge dialog state
   const [selectedReviewSets, setSelectedReviewSets] = useState<CardSet[]>([]);
   const [showReviewDialog, setShowReviewDialog] = useState(false);
-
-  // State for test email status
-  const [testEmailStatus, setTestEmailStatus] = useState<string | null>(null);
 
   // Auth listener
   useEffect(() => {
@@ -852,35 +872,38 @@ export function QuizletDashboard() {
     return content;
   };
 
-  // Handler for sending test email immediately (override scheduled time)
-  const sendEmailNow = async () => {
+  // Automatically schedule email sending at 6:30 AM local time.
+  useEffect(() => {
     if (!currentUser) return;
-    setTestEmailStatus('Sending...');
-    try {
-      // Build email content from the already available data
+    // Calculate the next occurrence of 6:30 AM.
+    const now = new Date();
+    const designatedTime = new Date();
+    designatedTime.setHours(6, 30, 0, 0);
+    // If 6:30 AM has already passed today, schedule for tomorrow.
+    if (now > designatedTime) {
+      designatedTime.setDate(designatedTime.getDate() + 1);
+    }
+    const delay = designatedTime.getTime() - now.getTime();
+    console.log(`Email will be sent in ${Math.round(delay / 1000)} seconds at 6:30 AM local time.`);
+    const timer = setTimeout(() => {
+      // Build email content and send it automatically.
       const emailContent = buildEmailContent();
-      // Use the current user's email from the auth object
-      const email = currentUser.email;
-      const response = await fetch('/api/send-email', {
+      // Using currentUser.email (assumed to be set)
+      fetch('/api/send-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          email, 
+          email: currentUser.email,
           emailContent,
-          override: true,
+          override: true // override to force send irrespective of request time
         }),
-      });
-      const data = await response.json();
-      if (response.ok) {
-        setTestEmailStatus('Email sent successfully!');
-      } else {
-        setTestEmailStatus(`Error: ${data.error || data.message}`);
-      }
-    } catch (error) {
-      console.error('Error sending email now:', error);
-      setTestEmailStatus('Error sending email now.');
-    }
-  };
+      })
+        .then(res => res.json())
+        .then(data => console.log('Auto email result:', data))
+        .catch(err => console.error('Error auto sending email:', err));
+    }, delay);
+    return () => clearTimeout(timer);
+  }, [currentUser, userCardSets]);
 
   if (authLoading) return <div>Loading...</div>;
   if (!currentUser) return <div>Please log in to view your dashboard.</div>;
@@ -919,11 +942,11 @@ export function QuizletDashboard() {
                     <div className="grid gap-4 py-4">
                       <div className="grid grid-cols-4 items-center gap-4">
                         <Label htmlFor="name" className="text-right">Name</Label>
-                        <Input id="name" value={userName} onChange={(e: ChangeEvent<HTMLInputElement>) => setUserName(e.target.value)} className="col-span-3" />
+                        <Input id="name" value={userName} onChange={(e) => setUserName(e.target.value)} className="col-span-3" />
                       </div>
                       <div className="grid grid-cols-4 items-center gap-4">
                         <Label htmlFor="bio" className="text-right">Bio</Label>
-                        <Textarea id="bio" value={userBio} onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setUserBio(e.target.value)} className="col-span-3" />
+                        <Textarea id="bio" value={userBio} onChange={(e) => setUserBio(e.target.value)} className="col-span-3" />
                       </div>
                     </div>
                     <Button onClick={handleProfileSave}>Save changes</Button>
@@ -961,7 +984,7 @@ export function QuizletDashboard() {
                 {userCardSets.filter(cs => {
                   const nextReview = getNextReviewTime(cs.lastReviewed, cs.reviewCount);
                   const today = new Date();
-                  today.setHours(0,0,0,0);
+                  today.setHours(0, 0, 0, 0);
                   return nextReview >= today.getTime() && nextReview <= (today.getTime() + 86400000);
                 }).length === 0 ? (
                   <p className="text-gray-500">No reviews scheduled for today.</p>
@@ -970,7 +993,7 @@ export function QuizletDashboard() {
                     {userCardSets.filter(cs => {
                       const nextReview = getNextReviewTime(cs.lastReviewed, cs.reviewCount);
                       const today = new Date();
-                      today.setHours(0,0,0,0);
+                      today.setHours(0, 0, 0, 0);
                       return nextReview >= today.getTime() && nextReview <= (today.getTime() + 86400000);
                     }).map(cs => (
                       <li key={cs.id} className="text-blue-600">{cs.title}</li>
@@ -983,7 +1006,7 @@ export function QuizletDashboard() {
                 {userCardSets.filter(cs => {
                   const nextReview = getNextReviewTime(cs.lastReviewed, cs.reviewCount);
                   const today = new Date();
-                  today.setHours(0,0,0,0);
+                  today.setHours(0, 0, 0, 0);
                   return nextReview < today.getTime();
                 }).length === 0 ? (
                   <p className="text-gray-500">No missed reviews.</p>
@@ -992,7 +1015,7 @@ export function QuizletDashboard() {
                     {userCardSets.filter(cs => {
                       const nextReview = getNextReviewTime(cs.lastReviewed, cs.reviewCount);
                       const today = new Date();
-                      today.setHours(0,0,0,0);
+                      today.setHours(0, 0, 0, 0);
                       return nextReview < today.getTime();
                     }).map(cs => (
                       <li key={cs.id} className="text-red-600">{cs.title}</li>
@@ -1134,16 +1157,8 @@ export function QuizletDashboard() {
         <Card>
           <CardContent className="p-4">
             <p className="text-xl">
-              Email notifications are automatically sent to your registered email at 21:30 local time.
+              Email notifications are automatically sent to your registered email at 6:30 AM local time.
             </p>
-          </CardContent>
-        </Card>
-
-        {/* New Section: Test Email Trigger */}
-        <Card>
-          <CardContent className="p-4">
-            <Button onClick={sendEmailNow}>Send Email Now</Button>
-            {testEmailStatus && <p className="mt-2">{testEmailStatus}</p>}
           </CardContent>
         </Card>
       </div>
