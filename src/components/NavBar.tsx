@@ -1,3 +1,5 @@
+
+
 'use client';
 
 import * as React from 'react';
@@ -87,13 +89,28 @@ export default function Navbar() {
     }
   }, []);
 
-  // Function to fetch card sets from the API
+  // Function to fetch card sets from the API only once per session (AM/PM)
   const fetchCardSets = async () => {
     try {
+      const cacheKey = 'cardSetsCache';
+      const sessionKey = 'cardSetsCacheSession';
+      const now = new Date();
+      const session = now.getHours() < 12 ? 'AM' : 'PM';
+
+      const cachedSession = localStorage.getItem(sessionKey);
+      const cachedData = localStorage.getItem(cacheKey);
+
+      if (cachedData && cachedSession === session) {
+        setCardSets(JSON.parse(cachedData));
+        return;
+      }
+
       const res = await fetch('/api/cardsets');
       const json = await res.json();
       if (json.success && json.data) {
         setCardSets(json.data);
+        localStorage.setItem(cacheKey, JSON.stringify(json.data));
+        localStorage.setItem(sessionKey, session);
       } else {
         console.error('No card sets returned from API.');
       }
@@ -127,7 +144,7 @@ export default function Navbar() {
   const todayEnd = new Date();
   todayEnd.setHours(23, 59, 59, 999);
 
-  // Card sets with a next review scheduled for today.
+  // Compute lists for notifications.
   const reviewDueToday = React.useMemo(() => {
     return userCardSets.filter((cs) => {
       const nextReview = getNextReviewTime(cs.lastReviewed, cs.reviewCount);
@@ -135,7 +152,6 @@ export default function Navbar() {
     });
   }, [userCardSets]);
 
-  // Card sets whose next review date is past (i.e. missed reviews).
   const missedReviews = React.useMemo(() => {
     return userCardSets.filter((cs) => {
       const nextReview = getNextReviewTime(cs.lastReviewed, cs.reviewCount);
@@ -468,3 +484,4 @@ export default function Navbar() {
     </>
   );
 }
+

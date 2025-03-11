@@ -52,17 +52,16 @@ type Flashcard = z.infer<typeof FlashcardSchema>
 type CardSet = z.infer<typeof CardSetSchema>
 
 interface CreateCardSetProps {
-  setCardSets: React.Dispatch<React.SetStateAction<CardSet[]>>
+  setCardSets?: React.Dispatch<React.SetStateAction<CardSet[]>>
   setNotification?: (notification: { type: 'success' | 'error', message: string } | null) => void
   existingCardSetsCount?: number
 }
 
 export default function CreateCardSet({
-  setCardSets,
+  setCardSets = () => {},
   setNotification = () => {},
   existingCardSetsCount = 0
 }: CreateCardSetProps) {
-  // Start with 5 flashcards instead of 1
   const [flashcards, setFlashcards] = useState<Flashcard[]>([
     { id: 1, question: '', answer: '', image: null },
     { id: 2, question: '', answer: '', image: null },
@@ -75,6 +74,23 @@ export default function CreateCardSet({
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
   const [currentUser, setCurrentUser] = useState<User | null>(null)
 
+  // Local notification state for the popup
+  const [notification, setNotificationState] = useState<{ type: 'success' | 'error', message: string } | null>(null)
+
+  // Function to show a notification popup
+  const showNotification = (notif: { type: 'success' | 'error', message: string }) => {
+    setNotification(notif)
+    setNotificationState(notif)
+  }
+
+  // Auto-dismiss the popup after 5 seconds
+  useEffect(() => {
+    if (notification) {
+      const timer = setTimeout(() => setNotificationState(null), 5000)
+      return () => clearTimeout(timer)
+    }
+  }, [notification])
+
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(user => setCurrentUser(user))
     return () => unsubscribe()
@@ -84,8 +100,10 @@ export default function CreateCardSet({
     if (flashcards.length < MAX_CARDS) {
       const newCard = { id: Date.now(), question: '', answer: '', image: null }
       setFlashcards([...flashcards, newCard])
+      // Notify user that a new flashcard has been created
+      showNotification({ type: 'success', message: 'Flashcard created successfully!' })
     } else {
-      setNotification({ type: 'error', message: `Maximum of ${MAX_CARDS} cards allowed.` })
+      showNotification({ type: 'error', message: `Maximum of ${MAX_CARDS} cards allowed.` })
     }
   }
 
@@ -101,11 +119,11 @@ export default function CreateCardSet({
 
   const saveFlashcards = async () => {
     if (existingCardSetsCount >= 20) {
-      setNotification({ type: 'error', message: 'Maximum of 20 flashcard sets allowed.' })
+      showNotification({ type: 'error', message: 'Maximum of 20 flashcard sets allowed.' })
       return;
     }
     if (!currentUser) {
-      setNotification({ type: 'error', message: 'You must be logged in to save card sets.' })
+      showNotification({ type: 'error', message: 'You must be logged in to save card sets.' })
       return;
     }
     try {
@@ -142,7 +160,7 @@ export default function CreateCardSet({
       const result = await response.json()
       if (result.success) {
         setCardSets(prev => [...prev, validatedSet])
-        setNotification({ type: 'success', message: `Card set "${validatedSet.title}" saved successfully!` })
+        showNotification({ type: 'success', message: `Card set "${validatedSet.title}" saved successfully!` })
         setFlashcards([{ id: Date.now(), question: '', answer: '', image: null }])
         setSetName('')
         setSetDescription('')
@@ -157,23 +175,31 @@ export default function CreateCardSet({
           newErrors[err.path.join('.')] = err.message
         })
         setErrors(newErrors)
-        setNotification({ type: 'error', message: "Please correct the errors in the form." })
+        showNotification({ type: 'error', message: "Please correct the errors in the form." })
       } else {
         console.error('Error saving card set:', error)
-        setNotification({ type: 'error', message: error instanceof Error ? error.message : 'An unknown error occurred' })
+        showNotification({ type: 'error', message: error instanceof Error ? error.message : 'An unknown error occurred' })
       }
     }
   }
 
   return (
     <div className="min-h-screen bg-gray-300">
-      {/* Top header spanning full width */}
+      {/* Notification Popup (mimicking the dashboard style) */}
+      {notification && (
+        <div className="fixed top-4 right-4 z-50">
+          <div className={`p-4 rounded shadow-lg ${notification.type === 'error' ? 'bg-red-50 border-l-4 border-red-500 text-red-800' : 'bg-green-50 border-l-4 border-green-500 text-green-800'}`}>
+            <p className="text-xl font-medium">{notification.message}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Top header */}
       <div className="w-full bg-gray-100 py-6">
         <h1 className="text-center text-5xl font-bold" style={{ color: "#0D005B" }}>
           Create Cards
         </h1>
       </div>
-      {/* Main content container spanning 100% width of the viewport with gray-100 background */}
       <div className="p-8 w-full bg-gray-100">
         <div className="mt-8 p-8 w-[60%] mx-auto flex flex-col items-center">
           <div className="w-full space-y-8">
@@ -207,7 +233,7 @@ export default function CreateCardSet({
               {errors['description'] && <p className="text-red-500 text-lg">{errors['description']}</p>}
             </div>
 
-            {/* Header row with cards counter and Add Card button */}
+            {/* Flashcards Header */}
             <div className="flex items-center justify-between mt-8">
               <p className="text-lg font-semibold text-gray-700">
                 {`Cards: ${flashcards.length} of ${MAX_CARDS}`}
@@ -221,12 +247,11 @@ export default function CreateCardSet({
               </Button>
             </div>
 
-            {/* List of Flashcards */}
+            {/* Flashcards List */}
             {flashcards.map((card, index) => (
               <Card key={card.id} className="bg-white shadow-md rounded-lg hover:shadow-xl transition-shadow my-6">
                 <div className="flex items-center justify-between p-4 bg-gray-50 border-b border-gray-300 rounded-t-lg">
                   <p className="text-xl font-bold text-gray-700">{index + 1}</p>
-                  {/* Remove Button */}
                   <Button
                     onClick={() => removeFlashcard(card.id)}
                     className="p-2 focus:outline-none border-0 text-gray-700 hover:text-gray-900 transition-colors duration-200"
@@ -267,6 +292,7 @@ export default function CreateCardSet({
               </Card>
             ))}
 
+            {/* Save Button */}
             <div className="flex justify-end">
               <Button 
                 onClick={saveFlashcards} 

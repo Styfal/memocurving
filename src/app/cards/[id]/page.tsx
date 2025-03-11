@@ -1,3 +1,5 @@
+
+
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
@@ -59,44 +61,24 @@ const formatDate = (timestamp: number): string => {
 };
 
 // Custom progress bar component.
-// It displays a center marker with two bars growing from the center:
-// green (for ticks) to the left and red (for crosses) to the right.
-// The unit is based on a required total of 2× the number of cards.
+// It displays a green bar that grows from the left.
+// Each correct answer adds (100/(2×total)) percent, so that mastering all cards fills the bar.
 const CustomProgressBar = ({
   greenCount,
-  redCount,
   total,
 }: {
   greenCount: number;
-  redCount: number;
   total: number;
 }) => {
-  // Total required ticks = 2 * total cards.
   const requiredTicks = 2 * total;
-  // Each half of the bar represents 50% of the container.
-  // unitPercent: How many percentage points one tick adds to half the bar.
-  const unitPercent = total > 0 ? 50 / requiredTicks : 0;
-  const leftWidth = greenCount * unitPercent;
-  const rightWidth = redCount * unitPercent;
+  const unitPercent = total > 0 ? 100 / requiredTicks : 0;
+  const greenWidth = greenCount * unitPercent;
   return (
-    <div className="relative w-full h-6 bg-gray-200 rounded" style={{ position: "relative" }}>
-  
-      {/* Left side (green) */}
+    <div className="relative w-full h-6 bg-gray-200 rounded">
       <div
-        className="absolute top-0 bottom-0 bg-green-700 rounded-l"
+        className="absolute top-0 left-0 bottom-0 bg-green-700 rounded-l"
         style={{
-          left: "50%",
-          width: `${leftWidth}%`,
-          transform: "translateX(-100%)",
-          transition: "width 0.3s ease",
-        }}
-      />
-      {/* Right side (red) */}
-      <div
-        className="absolute top-0 bottom-0 bg-red-700 rounded-r"
-        style={{
-          left: "50%",
-          width: `${rightWidth}%`,
+          width: `${greenWidth}%`,
           transition: "width 0.3s ease",
         }}
       />
@@ -326,7 +308,6 @@ const MemoFlashcard: NextPage<FlashcardPageProps> = ({ params }) => {
           </div>
           <CustomProgressBar
             greenCount={greenCount}
-            redCount={redCount}
             total={totalCardsRef.current}
           />
         </header>
