@@ -9,129 +9,87 @@ export function PricingCards() {
       <div className="container px-4 md:px-6">
         <div className="grid gap-4 md:gap-8">
           <div className="grid gap-2">
-            <h1 className="text-3xl font-bold text-center">Upgrade Plan</h1>
-            <p className="text-muted-foreground text-center">Accelerate your learning even further with extension features!</p>
+            <h1 className="text-3xl font-bold text-center" style={{ color: '#0D005B' }}>Upgrade Plan</h1>
+            <p className="text-muted-foreground text-center">
+              Accelerate your learning even further with extension features!
+            </p>
           </div>
           <div className="grid grid-cols-1 gap-6 mt-8 md:grid-cols-3 md:gap-8">
+            {/* Basic (Free) Card */}
             <div className="flex flex-col p-6 bg-white shadow-lg rounded-lg dark:bg-zinc-850 border border-gray-300 transition-transform duration-300 hover:scale-105">
-              <div className="flex items-center justify-center mb-4">
-                <RocketIcon className="h-8 w-8 text-primary" />
-              </div>
-              <div>
-                <h3 className="text-2xl font-bold text-center">Basic</h3>
-                <div className="mt-4 text-center text-zinc-600 dark:text-zinc-400">
-                  <span className="text-4xl font-bold">$29</span>/ month
+              <div className="flex flex-col flex-grow">
+                <div className="flex items-center justify-center mb-4">
+                  <RocketIcon className="h-8 w-8 text-primary" />
                 </div>
-                <ul className="mt-4 space-y-2">
-                  <li className="flex items-center">
-                    <CheckIcon className="text-green-700 text-xs rounded-full mr-2 p-1" />
-                    720p Video Rendering
-                  </li>
-                  <li className="flex items-center">
-                    <CheckIcon className="text-green-700 text-xs rounded-full mr-2 p-1" />
-                    2GB Cloud Storage
-                  </li>
-                  <li className="flex items-center">
-                    <CheckIcon className="text-green-700 text-xs rounded-full mr-2 p-1" />
-                    Basic Video Templates
-                  </li>
-                  <li className="flex items-center">
-                    <CheckIcon className="text-green-700 text-xs rounded-full mr-2 p-1" />
-                    1 User
-                  </li>
-                  <li className="flex items-center">
-                    <CheckIcon className="text-green-700 text-xs rounded-full mr-2 p-1" />
-                    Email Support
-                  </li>
-                </ul>
+                <div>
+                  <h3 className="text-2xl font-bold text-center">Basic (Free)</h3>
+                  <div className="mt-4 text-center text-zinc-600 dark:text-zinc-400">
+                    <span className="text-4xl font-bold">Free</span>
+                  </div>
+                  <p className="mt-4 text-center text-zinc-600 dark:text-zinc-400">
+                    beta testing
+                  </p>
+                </div>
               </div>
               <div className="mt-4 flex justify-center">
                 <Link href="/cart">
-                <Button className="w-full max-w-[200px] w-[180px] h-[40px] transition-transform duration-300 hover:scale-105 ">Get Started</Button>
+                  <Button className="w-full max-w-[200px] h-[40px] transition-transform duration-300 hover:scale-105">
+                    Get Started
+                  </Button>
                 </Link>
-                
               </div>
             </div>
+
+            {/* Pro Card */}
             <div className="relative flex flex-col p-6 bg-white shadow-lg rounded-lg dark:bg-zinc-850 border border-green-500 transition-transform duration-300 hover:scale-105">
-              <div className="flex items-center justify-center mb-4">
-                <RocketIcon className="h-8 w-8 text-primary" />
-              </div>
-              <div className="px-3 py-1 text-sm text-white bg-gradient-to-r from-green-500 to-blue-500 rounded-full inline-block absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                Popular
-              </div>
-              <div>
-                <h3 className="text-2xl font-bold text-center">Pro</h3>
-                <div className="mt-4 text-center text-zinc-600 dark:text-zinc-400">
-                  <span className="text-4xl font-bold">$59</span>/ month
+              <div className="flex flex-col flex-grow">
+                <div className="flex items-center justify-center mb-4">
+                  <RocketIcon className="h-8 w-8 text-primary" />
                 </div>
-                <ul className="mt-4 space-y-2">
-                  <li className="flex items-center">
-                    <CheckIcon className="text-green-700 text-xs rounded-full mr-2 p-1" />
-                    1080p Video Rendering
-                  </li>
-                  <li className="flex items-center">
-                    <CheckIcon className="text-green-700 text-xs rounded-full mr-2 p-1" />
-                    10GB Cloud Storage
-                  </li>
-                  <li className="flex items-center">
-                    <CheckIcon className="text-green-700 text-xs rounded-full mr-2 p-1" />
-                    Premium Video Templates
-                  </li>
-                  <li className="flex items-center">
-                    <CheckIcon className="text-green-700 text-xs rounded-full mr-2 p-1" />
-                    Collaboration Tools
-                  </li>
-                  <li className="flex items-center">
-                    <CheckIcon className="text-green-700 text-xs rounded-full mr-2 p-1" />
-                    5 Users
-                  </li>
-                </ul>
+                <div className="px-3 py-1 text-sm text-white bg-gradient-to-r from-green-500 to-blue-500 rounded-full inline-block absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                  Popular
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-center">Pro</h3>
+                  <div className="mt-4 text-center text-zinc-600 dark:text-zinc-400">
+                    <span className="text-4xl font-bold">400 yen</span> / month
+                  </div>
+                  <p className="mt-4 text-center text-zinc-600 dark:text-zinc-400">
+                    to be announced...
+                  </p>
+                </div>
               </div>
               <div className="mt-4 flex justify-center">
                 <Link href="/cart">
-                <Button className="w-full max-w-[200px] bg-gradient-to-r from-green-500 to-blue-500 w-[180px] h-[40px] transition-transform duration-300 hover:scale-105">
-                  Get Started
-                </Button>
+                  <Button className="w-full max-w-[200px] h-[40px] bg-gradient-to-r from-green-500 to-blue-500 transition-transform duration-300 hover:scale-105">
+                    Get Started
+                  </Button>
                 </Link>
-               
               </div>
             </div>
+
+            {/* Enterprise Card */}
             <div className="flex flex-col p-6 bg-white shadow-lg rounded-lg dark:bg-zinc-850 border border-gray-300 transition-transform duration-300 hover:scale-105">
-              <div className="flex items-center justify-center mb-4">
-                <RocketIcon className="h-8 w-8 text-primary" />
-              </div>
-              <div>
-                <h3 className="text-2xl font-bold text-center">Enterprise</h3>
-                <div className="mt-4 text-center text-zinc-600 dark:text-zinc-400">
-                  <span className="text-4xl font-bold">$99</span>/ month
+              <div className="flex flex-col flex-grow">
+                <div className="flex items-center justify-center mb-4">
+                  <RocketIcon className="h-8 w-8 text-primary" />
                 </div>
-                <ul className="mt-4 space-y-2">
-                  <li className="flex items-center">
-                    <CheckIcon className="text-green-700 text-xs rounded-full mr-2 p-1" />
-                    4K Video Rendering
-                  </li>
-                  <li className="flex items-center">
-                    <CheckIcon className="text-green-700 text-xs rounded-full mr-2 p-1" />
-                    Unlimited Cloud Storage
-                  </li>
-                  <li className="flex items-center">
-                    <CheckIcon className="text-green-700 text-xs rounded-full mr-2 p-1" />
-                    Custom Video Templates
-                  </li>
-                  <li className="flex items-center">
-                    <CheckIcon className="text-green-700 text-xs rounded-full mr-2 p-1" />
-                    Advanced Collaboration Tools
-                  </li>
-                  <li className="flex items-center">
-                    <CheckIcon className="text-green-700 text-xs rounded-full mr-2 p-1" />
-                    Unlimited Users
-                  </li>
-                </ul>
+                <div>
+                  <h3 className="text-2xl font-bold text-center">Enterprise</h3>
+                  <div className="mt-4 text-center text-zinc-600 dark:text-zinc-400">
+                    <span className="text-4xl font-bold">to be announced...</span>
+                  </div>
+                  <p className="mt-4 text-center text-zinc-600 dark:text-zinc-400">
+                    to be announced...
+                  </p>
+                </div>
               </div>
               <div className="mt-4 flex justify-center">
-                <Link href="/cart">
+                <Link href="/contact">
+                  <Button className="w-full max-w-[200px] h-[40px] transition-transform duration-300 hover:scale-105">
+                    Contact Us
+                  </Button>
                 </Link>
-                <Button className="w-full max-w-[200px] w-[180px] h-[40px] transition-transform duration-300 hover:scale-105">Get Started</Button>
               </div>
             </div>
           </div>
@@ -141,7 +99,7 @@ export function PricingCards() {
   )
 }
 
-function CheckIcon(props:React.SVGProps<SVGSVGElement>) {
+function CheckIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg
       {...props}
@@ -160,8 +118,7 @@ function CheckIcon(props:React.SVGProps<SVGSVGElement>) {
   )
 }
 
-
-function RocketIcon(props:React.SVGProps<SVGSVGElement>) {
+function RocketIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg
       {...props}
@@ -183,8 +140,7 @@ function RocketIcon(props:React.SVGProps<SVGSVGElement>) {
   )
 }
 
-
-function XIcon(props:React.SVGProps<SVGSVGElement>) {
+function XIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg
       {...props}

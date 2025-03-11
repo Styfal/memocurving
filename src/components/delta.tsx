@@ -1,3 +1,6 @@
+
+
+
 import React, { useState, useRef } from 'react'
 import Image from 'next/image'
 import { Button } from "@/components/ui/button"
@@ -6,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { PlusIcon, SaveIcon, ImageIcon, TrashIcon, EditIcon } from 'lucide-react'
+import { PlusIcon, SaveIcon, TrashIcon, EditIcon } from 'lucide-react'
 
 interface Flashcard {
     id: number
@@ -67,7 +70,9 @@ export default function EditCardSets({ cardSets, setCardSets, setNotification }:
             })
         }
     }
-
+    
+    // Commented out the image functionality
+    /*
     const handleImageUpload = (id: number, event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0]
         if (file && editingSet) {
@@ -94,6 +99,7 @@ export default function EditCardSets({ cardSets, setCardSets, setNotification }:
             })
         }
     }
+    */
 
     const saveEditedSet = () => {
         if (editingSet) {
@@ -158,7 +164,7 @@ export default function EditCardSets({ cardSets, setCardSets, setNotification }:
                             <CardContent className="p-4 grid grid-cols-2 gap-4">
                                 <div className="space-y-4">
                                     <div>
-                                        <Label htmlFor={`edit-question-${card.id}`} className="text-lg text-purple-700">Question</Label>
+                                        <Label htmlFor={`edit-question-${card.id}`} className="text-lg text-purple-700">Question (20 words max)</Label>
                                         <Input
                                             id={`edit-question-${card.id}`}
                                             value={card.question}
@@ -167,52 +173,10 @@ export default function EditCardSets({ cardSets, setCardSets, setNotification }:
                                             className="mt-1 bg-white/50 border-purple-200 focus:border-purple-500 focus:ring-purple-500"
                                         />
                                     </div>
-                                    <div>
-                                        <Label htmlFor={`edit-image-${card.id}`} className="text-lg text-purple-700">Image</Label>
-                                        <div className="mt-1 flex items-center space-x-2">
-                                            <Button
-                                                type="button"
-                                                onClick={() => fileInputRef.current?.click()}
-                                                className="bg-purple-600 hover:bg-purple-700 text-white"
-                                            >
-                                                <ImageIcon className="mr-2 h-4 w-4" />
-                                                Upload Image
-                                            </Button>
-                                            <input
-                                                type="file"
-                                                id={`edit-image-${card.id}`}
-                                                ref={fileInputRef}
-                                                className="hidden"
-                                                accept="image/*"
-                                                onChange={(e) => handleImageUpload(card.id, e)}
-                                            />
-                                            {card.image && (
-                                                <Button
-                                                    type="button"
-                                                    variant="outline"
-                                                    onClick={() => removeImage(card.id)}
-                                                    className="text-red-500 hover:text-red-700"
-                                                >
-                                                    <TrashIcon className="mr-2 h-4 w-4" />
-                                                    Remove Image
-                                                </Button>
-                                            )}
-                                        </div>
-                                        {card.image && (
-                                            <div className="mt-2 relative w-full h-40">
-                                                <Image
-                                                    src={card.image}
-                                                    alt="Uploaded image"
-                                                    layout="fill"
-                                                    objectFit="contain"
-                                                />
-                                            </div>
-                                        )}
-                                    </div>
                                 </div>
                                 <div className="space-y-4">
                                     <div>
-                                        <Label htmlFor={`edit-answer-${card.id}`} className="text-lg text-purple-700">Answer</Label>
+                                        <Label htmlFor={`edit-answer-${card.id}`} className="text-lg text-purple-700">Answer (40 words max)</Label>
                                         <Input
                                             id={`edit-answer-${card.id}`}
                                             value={card.answer}

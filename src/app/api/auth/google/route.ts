@@ -1,3 +1,45 @@
+
+
+// import { NextRequest, NextResponse } from 'next/server';
+// import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+// import { doc, setDoc } from 'firebase/firestore';
+// import { auth, db } from '@/lib/firebase';
+
+// export async function POST(request: NextRequest) {
+//   try {
+//     const provider = new GoogleAuthProvider();
+//     const userCredential = await signInWithPopup(auth, provider);
+//     const user = userCredential.user;
+
+//     // Save/update user data with isPremium defaulted to false if not already set
+//     await setDoc(doc(db, 'users', user.uid), {
+//       uid: user.uid,
+//       email: user.email,
+//       name: user.displayName,
+//       photoURL: user.photoURL,
+//       lastLogin: Date.now(),
+//       isPremium: false // default to free user
+//     }, { merge: true });
+
+//     return NextResponse.json({ 
+//       message: 'Google sign-in successful',
+//       user: {
+//         uid: user.uid,
+//         email: user.email,
+//         name: user.displayName,
+//         photoURL: user.photoURL
+//       }
+//     });
+
+//   } catch (error: any) {
+//     return NextResponse.json(
+//       { error: error.message || 'Google sign-in failed' },
+//       { status: 401 }
+//     );
+//   }
+// }
+
+
 import { NextRequest, NextResponse } from 'next/server';
 import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
@@ -9,13 +51,16 @@ export async function POST(request: NextRequest) {
     const userCredential = await signInWithPopup(auth, provider);
     const user = userCredential.user;
 
-    // Save/update user data
+    // Initialize user document with default fields including AI usage counters.
     await setDoc(doc(db, 'users', user.uid), {
       uid: user.uid,
       email: user.email,
       name: user.displayName,
       photoURL: user.photoURL,
-      lastLogin: Date.now()
+      lastLogin: Date.now(),
+      isPremium: false, // default free
+      aiUsageCount: 0,
+      aiUsageResetAt: new Date().toISOString()
     }, { merge: true });
 
     return NextResponse.json({ 
@@ -27,7 +72,6 @@ export async function POST(request: NextRequest) {
         photoURL: user.photoURL
       }
     });
-
   } catch (error: any) {
     return NextResponse.json(
       { error: error.message || 'Google sign-in failed' },

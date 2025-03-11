@@ -1,40 +1,152 @@
 "use client"
 
-import React, { useState, ChangeEvent } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Switch } from "@/components/ui/switch"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Eye, EyeOff, Moon, Sun, Upload, Github, Mail, Facebook } from "lucide-react"
+import React, { useState, useEffect, ChangeEvent, FormEvent } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Eye, EyeOff, Moon, Sun, Upload, Github, Mail, Facebook } from "lucide-react";
+
+import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
+import { db, auth } from "@/lib/firebase";
 
 export function EnhancedSettingsPageComponent() {
-  const [isDarkMode, setIsDarkMode] = useState(false)
-  const [isProfileVisible, setIsProfileVisible] = useState(true)
-  const [language, setLanguage] = useState("english")
-  const [profileImage, setProfileImage] = useState("/placeholder.svg?height=100&width=100")
-
-  const toggleDarkMode = () => {
-    setIsDarkMode((prev) => !prev)
-    document.documentElement.classList.toggle("dark")
+  // Use the authenticated user's UID.
+  const currentUser = auth.currentUser;
+  if (!currentUser) {
+    return <div>Please log in to access your settings.</div>;
   }
+  const userId = currentUser.uid;
 
-  const handleProfileImageChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (file) {
-      const reader = new FileReader()
-      reader.onload = (e: ProgressEvent<FileReader>) => {
-        const result = e.target?.result
-        if (typeof result === 'string') {
-          setProfileImage(result)
-        }
-      }
-      reader.readAsDataURL(file)
+  // Settings state variables
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [isProfileVisible, setIsProfileVisible] = useState(true);
+  const [language, setLanguage] = useState("english");
+  const [profileImage, setProfileImage] = useState("/placeholder.svg?height=100&width=100");
+  const [username, setUsername] = useState("");
+  // New state for in‑app notifications
+  const [pushNotificationsEnabled, setPushNotificationsEnabled] = useState(true);
+
+  // Load pushNotificationsEnabled from localStorage on mount
+  useEffect(() => {
+    const stored = localStorage.getItem("pushNotificationsEnabled");
+    if (stored !== null) {
+      setPushNotificationsEnabled(JSON.parse(stored));
     }
-  }
+  }, []);
+
+  // Load settings from Firestore when the component mounts
+  useEffect(() => {
+    const loadSettings = async () => {
+      const docRef = doc(db, "users", userId);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        if (data.isDarkMode !== undefined) {
+          setIsDarkMode(data.isDarkMode);
+          // Apply dark mode class if enabled
+          if (data.isDarkMode) {
+            document.documentElement.classList.add("dark");
+          } else {
+            document.documentElement.classList.remove("dark");
+          }
+          localStorage.setItem("darkMode", JSON.stringify(data.isDarkMode));
+        }
+        if (data.isProfileVisible !== undefined) {
+          setIsProfileVisible(data.isProfileVisible);
+        }
+        if (data.language !== undefined) {
+          setLanguage(data.language);
+        }
+        if (data.profileImage !== undefined) {
+          setProfileImage(data.profileImage);
+        }
+        if (data.name !== undefined) {
+          setUsername(data.name);
+        }
+      } else {
+        // Initialize the settings document with defaults if it doesn't exist
+        await setDoc(doc(db, "users", userId), {
+          isDarkMode: false,
+          isProfileVisible: true,
+          language: "english",
+          profileImage: "/placeholder.svg?height=100&width=100",
+          name: "",
+        });
+      }
+    };
+
+    loadSettings();
+  }, [userId]);
+
+  // Toggle dark mode and update Firestore & localStorage
+  const toggleDarkMode = async () => {
+    const newValue = !isDarkMode;
+    setIsDarkMode(newValue);
+    document.documentElement.classList.toggle("dark");
+    localStorage.setItem("darkMode", JSON.stringify(newValue));
+    const docRef = doc(db, "users", userId);
+    await updateDoc(docRef, { isDarkMode: newValue });
+  };
+
+  // Handle profile image changes and update Firestore
+  const handleProfileImageChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e: ProgressEvent<FileReader>) => {
+        const result = e.target?.result;
+        if (typeof result === "string") {
+          setProfileImage(result);
+          // Update Firestore with the new profile image
+          (async () => {
+            const docRef = doc(db, "users", userId);
+            await updateDoc(docRef, { profileImage: result });
+          })();
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Handle language changes and update Firestore
+  const handleLanguageChange = async (newLanguage: string) => {
+    setLanguage(newLanguage);
+    const docRef = doc(db, "users", userId);
+    await updateDoc(docRef, { language: newLanguage });
+  };
+
+  // Handle profile visibility changes and update Firestore
+  const handleProfileVisibilityChange = async (visible: boolean) => {
+    setIsProfileVisible(visible);
+    const docRef = doc(db, "users", userId);
+    await updateDoc(docRef, { isProfileVisible: visible });
+  };
+
+  // Handle in‑app notification toggle change
+  const handlePushNotificationsChange = (checked: boolean) => {
+    setPushNotificationsEnabled(checked);
+    localStorage.setItem("pushNotificationsEnabled", JSON.stringify(checked));
+  };
+
+  // Handle account form submission (currently for username only)
+  const handleAccountSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    const docRef = doc(db, "users", userId);
+    await updateDoc(docRef, { name: username });
+    // Optionally, you could show a success message here.
+  };
 
   return (
     <div className={`min-h-screen p-8 ${isDarkMode ? "dark" : ""}`}>
@@ -79,13 +191,24 @@ export function EnhancedSettingsPageComponent() {
                   <Label htmlFor="bio">Bio</Label>
                   <Input id="bio" placeholder="Tell us about yourself" />
                 </div>
+                {/* Dark mode toggle now appears only in the Profile tab */}
+                <div className="flex items-center space-x-2">
+                  <Switch id="dark-mode" checked={isDarkMode} onCheckedChange={toggleDarkMode} />
+                  <Label htmlFor="dark-mode">Dark Mode</Label>
+                  {isDarkMode ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+                </div>
               </div>
             </TabsContent>
             <TabsContent value="account">
-              <form className="space-y-4">
+              <form className="space-y-4" onSubmit={handleAccountSubmit}>
                 <div className="space-y-2">
                   <Label htmlFor="username">Username</Label>
-                  <Input id="username" placeholder="Your username" />
+                  <Input
+                    id="username"
+                    placeholder="Your username"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
@@ -101,7 +224,7 @@ export function EnhancedSettingsPageComponent() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="language">Language</Label>
-                  <Select value={language} onValueChange={setLanguage}>
+                  <Select value={language} onValueChange={handleLanguageChange}>
                     <SelectTrigger id="language">
                       <SelectValue placeholder="Select Language" />
                     </SelectTrigger>
@@ -129,7 +252,7 @@ export function EnhancedSettingsPageComponent() {
                   <Switch
                     id="profile-visibility"
                     checked={isProfileVisible}
-                    onCheckedChange={setIsProfileVisible}
+                    onCheckedChange={handleProfileVisibilityChange}
                   />
                 </div>
                 <div className="space-y-2">
@@ -154,8 +277,12 @@ export function EnhancedSettingsPageComponent() {
                   <Label htmlFor="email-notifications">Email Notifications</Label>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Switch id="push-notifications" />
-                  <Label htmlFor="push-notifications">Push Notifications</Label>
+                  <Switch 
+                    id="push-notifications" 
+                    checked={pushNotificationsEnabled} 
+                    onCheckedChange={handlePushNotificationsChange} 
+                  />
+                  <Label htmlFor="push-notifications">In‑App Notification</Label>
                 </div>
               </div>
             </TabsContent>
@@ -186,12 +313,8 @@ export function EnhancedSettingsPageComponent() {
             </TabsContent>
           </Tabs>
         </CardContent>
-        <CardFooter className="flex justify-between">
-          <div className="flex items-center space-x-2">
-            <Switch id="dark-mode" checked={isDarkMode} onCheckedChange={toggleDarkMode} />
-            <Label htmlFor="dark-mode">Dark Mode</Label>
-            {isDarkMode ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
-          </div>
+        <CardFooter className="flex justify-end">
+          {/* Only profile visibility toggle remains here */}
           <div className="flex items-center space-x-2">
             {isProfileVisible ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
             <span className="text-sm text-muted-foreground">
@@ -201,5 +324,5 @@ export function EnhancedSettingsPageComponent() {
         </CardFooter>
       </Card>
     </div>
-  )
+  );
 }

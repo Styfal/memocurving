@@ -1,3 +1,4 @@
+
 'use client'
 
 import { useState, useEffect, useReducer } from "react";
@@ -33,8 +34,7 @@ export default function LoginPage() {
 
     const handleLogin = async () => {
         try {
-            const result = await login();
-            console.log(state);
+            await login();
             router.push('/');  // Redirect to home page after successful login
         } catch (error) {
             console.error("Login failed:", error);
@@ -51,47 +51,51 @@ export default function LoginPage() {
 
     return (
         <AuthContext.Provider value={state}>
-            <div className="flex min-h-screen bg-white">
-                <div className="flex w-full flex-col justify-center px-4 py-12 sm:px-6 lg:w-1/2 lg:px-8">
-                    <div className="mx-auto w-full max-w-sm">
-                        <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
+            <div className="relative flex min-h-screen">
+                {/* Background Image with Overlay */}
+                <div className="absolute inset-0">
+                    <Image
+                        src="/placeholder.svg?height=1080&width=1920"
+                        alt="Login background"
+                        layout="fill"
+                        objectFit="cover"
+                        priority
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-r from-cyan-600 to-blue-600 opacity-50"></div>
+                </div>
+
+                {/* Login Card */}
+                <div className="relative z-10 flex w-full flex-col items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
+                    <div className="w-full max-w-md rounded-lg bg-white p-8 shadow-lg">
+                        <h2 className="mt-2 text-center text-3xl font-extrabold text-gray-900">
                             Welcome Back
                         </h2>
-                        <p className="mt-2 text-sm text-gray-600">
+                        <p className="mt-2 text-center text-sm text-gray-600">
                             Sign in to your account
                         </p>
+
                         <div className="mt-8 space-y-6">
                             <Button
-                                onClick={() => handleLogin()}
-                                className="w-full bg-cyan-600 hover:bg-cyan-500"
+                                onClick={handleLogin}
+                                className="w-full rounded-md bg-cyan-600 py-2 text-white hover:bg-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-400"
                             >
                                 Login with Google
                             </Button>
                             <Button
-                                onClick={() => handleLogout()}
-                                className="w-full bg-red-600 hover:bg-red-500"
+                                onClick={handleLogout}
+                                className="w-full rounded-md bg-red-600 py-2 text-white hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-red-400"
                             >
                                 Logout
                             </Button>
-                            <div className="mt-4 text-center text-sm">
-                                {state
+                            <div className="mt-4 text-center text-sm text-gray-700">
+                                {state && state.displayName
                                     ? `Logged in as ${state.displayName}`
                                     : "Not logged in"}
                             </div>
                         </div>
                     </div>
                 </div>
-                <div className="hidden lg:block lg:w-1/2 relative">
-                    <Image
-                        className="absolute inset-0 h-full w-full object-cover"
-                        src="/placeholder.svg?height=1080&width=1920"
-                        alt="Login background"
-                        width={1920}
-                        height={1080}
-                    />
-                </div>
             </div>
         </AuthContext.Provider>
     );
 }
-

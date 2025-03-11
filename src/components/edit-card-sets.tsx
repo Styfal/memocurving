@@ -1,52 +1,62 @@
+
+
+
+
+
 'use client'
 
 import React, { useState, useRef } from 'react'
-import Image from 'next/image'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { PlusIcon, SaveIcon, ImageIcon, TrashIcon, EditIcon } from 'lucide-react'
+import { Textarea } from '@/components/ui/textarea'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { PlusIcon, SaveIcon, TrashIcon, EditIcon } from 'lucide-react'
 import { z } from 'zod'
 
-const MAX_CARDS = 50
+const MAX_CARDS = 20
 const MAX_WORD_COUNT = {
   setName: 10,
   setDescription: 50,
-  question: 100,
-  answer: 500
+  question: 20,
+  answer: 40
 }
 
 const FlashcardSchema = z.object({
   id: z.number(),
-  question: z.string().min(1).max(MAX_WORD_COUNT.question),
-  answer: z.string().min(1).max(MAX_WORD_COUNT.answer),
-  image: z.string().nullable()
+  question: z.string().min(1).refine(
+    (val) => val.split(/\s+/).filter(Boolean).length <= MAX_WORD_COUNT.question,
+    { message: `Question must be at most ${MAX_WORD_COUNT.question} words.` }
+  ),
+  answer: z.string().min(1).refine(
+    (val) => val.split(/\s+/).filter(Boolean).length <= MAX_WORD_COUNT.answer,
+    { message: `Answer must be at most ${MAX_WORD_COUNT.answer} words.` }
+  ),
+  image: z.string().nullable(),
+  // Review metadata is not edited here.
+  lastReviewed: z.number().default(0),
+  reviewCount: z.number().default(0),
 })
 
 const CardSetSchema = z.object({
   id: z.number(),
-  title: z.string().min(1).max(MAX_WORD_COUNT.setName),
-  description: z.string().max(MAX_WORD_COUNT.setDescription),
+  name: z.string().min(1).refine(
+    (val) => val.split(/\s+/).filter(Boolean).length <= MAX_WORD_COUNT.setName,
+    { message: `Set Name must be at most ${MAX_WORD_COUNT.setName} words.` }
+  ),
+  description: z.string().min(0).refine(
+    (val) => val.split(/\s+/).filter(Boolean).length <= MAX_WORD_COUNT.setDescription,
+    { message: `Set Description must be at most ${MAX_WORD_COUNT.setDescription} words.` }
+  ),
   cards: z.array(FlashcardSchema).min(1).max(MAX_CARDS)
 })
 
 type Flashcard = z.infer<typeof FlashcardSchema>
 type CardSet = z.infer<typeof CardSetSchema>
 
-interface TestSet {
-  id: number
-  name: string
-  description: string
-  questions: any[] // Simplified for this example
-}
-
-type CombinedSet = CardSet | TestSet
-
 interface EditCardSetsProps {
-  combinedSets: CombinedSet[]
+  combinedSets: (CardSet | any)[]
   setCardSets: React.Dispatch<React.SetStateAction<CardSet[]>>
   setNotification: (notification: { type: 'success' | 'error', message: string } | null) => void
 }
@@ -55,12 +65,7 @@ export default function EditCardSets({ combinedSets, setCardSets, setNotificatio
   const [editingSet, setEditingSet] = useState<CardSet | null>(null)
   const [selectedSetId, setSelectedSetId] = useState<number | null>(null)
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
-  const fileInputRef = useRef<HTMLInputElement>(null)
-
-  // Filter out only CardSets from CombinedSets
-  const cardSetsOnly = combinedSets.filter(
-    (set): set is CardSet => 'cards' in set && Array.isArray(set.cards)
-  )
+  const cardSetsOnly = combinedSets.filter(set => 'cards' in set)
 
   const startEditing = (setId: number) => {
     const set = cardSetsOnly.find(s => s.id === setId)
@@ -76,35 +81,8 @@ export default function EditCardSets({ combinedSets, setCardSets, setNotificatio
     if (editingSet) {
       setEditingSet({
         ...editingSet,
-        cards: editingSet.cards.map(card =>
+        cards: editingSet.cards.map(card => 
           card.id === id ? { ...card, [field]: value } : card
-        )
-      })
-    }
-  }
-
-  const handleImageUpload = (id: number, event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (file && editingSet) {
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        setEditingSet({
-          ...editingSet,
-          cards: editingSet.cards.map(card =>
-            card.id === id ? { ...card, image: reader.result as string } : card
-          )
-        })
-      }
-      reader.readAsDataURL(file)
-    }
-  }
-
-  const removeImage = (id: number) => {
-    if (editingSet) {
-      setEditingSet({
-        ...editingSet,
-        cards: editingSet.cards.map(card =>
-          card.id === id ? { ...card, image: null } : card
         )
       })
     }
@@ -113,9 +91,9 @@ export default function EditCardSets({ combinedSets, setCardSets, setNotificatio
   const saveEditedSet = () => {
     if (editingSet) {
       try {
-        const validatedSet = CardSetSchema.parse(editingSet)
-        setCardSets(prevSets => prevSets.map(set =>
-          set.id === validatedSet.id ? validatedSet : set
+        CardSetSchema.parse(editingSet);
+        setCardSets(prevSets => prevSets.map(set => 
+          set.id === editingSet.id ? editingSet : set
         ))
         setEditingSet(null)
         setSelectedSetId(null)
@@ -143,7 +121,7 @@ export default function EditCardSets({ combinedSets, setCardSets, setNotificatio
     if (editingSet && editingSet.cards.length < MAX_CARDS) {
       setEditingSet({
         ...editingSet,
-        cards: [...editingSet.cards, { id: Date.now(), question: '', answer: '', image: null }]
+        cards: [...editingSet.cards, { id: Date.now(), question: '', answer: '', image: null, lastReviewed: 0, reviewCount: 0 }]
       })
     } else {
       setNotification({ type: 'error', message: `Maximum of ${MAX_CARDS} cards allowed.` })
@@ -164,18 +142,18 @@ export default function EditCardSets({ combinedSets, setCardSets, setNotificatio
       {editingSet ? (
         <>
           <div className="space-y-2">
-            <Label htmlFor="setName">Set Name</Label>
+            <Label htmlFor="setName">Set Name (10 words max)</Label>
             <Input
               id="setName"
-              value={editingSet.title}
-              onChange={(e) => setEditingSet({ ...editingSet, title: e.target.value })}
+              value={editingSet.name}
+              onChange={e => setEditingSet({ ...editingSet, name: e.target.value })}
               maxLength={MAX_WORD_COUNT.setName}
             />
-            <Label htmlFor="setDescription">Set Description</Label>
+            <Label htmlFor="setDescription">Set Description (50 words max)</Label>
             <Textarea
               id="setDescription"
               value={editingSet.description}
-              onChange={(e) => setEditingSet({ ...editingSet, description: e.target.value })}
+              onChange={e => setEditingSet({ ...editingSet, description: e.target.value })}
               maxLength={MAX_WORD_COUNT.setDescription}
             />
           </div>
@@ -183,24 +161,23 @@ export default function EditCardSets({ combinedSets, setCardSets, setNotificatio
             <Card key={card.id} className="bg-white/50">
               <CardContent className="p-4 grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor={`question-${card.id}`}>Question</Label>
+                  <Label htmlFor={`question-${card.id}`}>Question (20 words max)</Label>
                   <Textarea
                     id={`question-${card.id}`}
                     value={card.question}
-                    onChange={(e) => updateFlashcard(card.id, 'question', e.target.value)}
+                    onChange={e => updateFlashcard(card.id, 'question', e.target.value)}
                     maxLength={MAX_WORD_COUNT.question}
                   />
                 </div>
                 <div>
-                  <Label htmlFor={`answer-${card.id}`}>Answer</Label>
+                  <Label htmlFor={`answer-${card.id}`}>Answer (40 words max)</Label>
                   <Textarea
                     id={`answer-${card.id}`}
                     value={card.answer}
-                    onChange={(e) => updateFlashcard(card.id, 'answer', e.target.value)}
+                    onChange={e => updateFlashcard(card.id, 'answer', e.target.value)}
                     maxLength={MAX_WORD_COUNT.answer}
                   />
                 </div>
-
                 <Button onClick={() => removeFlashcard(card.id)} variant="destructive" className="col-span-2">
                   <TrashIcon className="mr-2 h-4 w-4" />
                   Remove Card
@@ -208,9 +185,9 @@ export default function EditCardSets({ combinedSets, setCardSets, setNotificatio
               </CardContent>
             </Card>
           ))}
-          <div className="flex justify-between">
+          <div className="flex justify-between mt-6">
             <Button onClick={addFlashcard} className="bg-green-600 hover:bg-green-700 text-white">
-              <PlusIcon className="mr-2 h-4 w-4" />
+              <PlusIcon className="mr-2 h-5 w-5" />
               Add Card
             </Button>
             <Button onClick={saveEditedSet} className="bg-blue-600 hover:bg-blue-700 text-white">
@@ -221,14 +198,14 @@ export default function EditCardSets({ combinedSets, setCardSets, setNotificatio
         </>
       ) : (
         <>
-          <Select onValueChange={(value) => startEditing(Number(value))}>
+          <Select onValueChange={value => startEditing(Number(value))}>
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Select a card set to edit" />
             </SelectTrigger>
             <SelectContent>
               {cardSetsOnly.length > 0 ? (
-                cardSetsOnly.map((set) => (
-                  <SelectItem key={set.id} value={set.id.toString()}>{set.title}</SelectItem>
+                cardSetsOnly.map(set => (
+                  <SelectItem key={set.id} value={set.id.toString()}>{set.name}</SelectItem>
                 ))
               ) : (
                 <SelectItem value="no-sets" disabled>No card sets available</SelectItem>
@@ -236,10 +213,10 @@ export default function EditCardSets({ combinedSets, setCardSets, setNotificatio
             </SelectContent>
           </Select>
           {cardSetsOnly.length > 0 ? (
-            cardSetsOnly.map((set) => (
+            cardSetsOnly.map(set => (
               <Card key={set.id} className="bg-white/50">
                 <CardContent className="p-4">
-                  <h3 className="text-lg font-semibold text-purple-700">{set.title}</h3>
+                  <h3 className="text-lg font-semibold text-purple-700">{set.name}</h3>
                   <p className="text-sm text-gray-600 mt-1">{set.description}</p>
                   <p className="text-sm text-gray-600 mt-1">
                     Cards: {set.cards.length}

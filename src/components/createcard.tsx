@@ -1,8 +1,8 @@
+
 "use client";
 
 import { useState, useEffect, SetStateAction } from 'react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import Sidebar from './sidebar';
 import CreateCardSet from './create-card-set';
 import EditCardSets from './edit-card-sets';
 import TestCreate from './test-create';
@@ -15,9 +15,9 @@ interface Flashcard {
   image: string | null;
 }
 
-export interface CardSet {
+interface CardSet {
   id: number;
-  title: string;
+  name: string;
   description: string;
   cards: Flashcard[];
 }
@@ -82,14 +82,19 @@ export default function CreateCards() {
   };
 
   return (
-    <div className="flex h-screen">
+    <div className="flex h-screen bg-gray-100">
       <Sidebar currentPage={currentPage} setCurrentPage={setCurrentPage} />
       <div className="flex-1 p-8 overflow-auto">
-        <h1 className="text-4xl font-bold mb-8 text-center text-cyan-800">
-          {currentPage === 'create' ? 'Create Card Set' :
-            currentPage === 'edit' ? 'Edit Card Sets' :
-              currentPage === 'test' ? 'Test Create' :
-                currentPage === 'ai' ? 'AI Create' : ''}
+        <h1 className="text-4xl font-bold mb-8 text-center" style={{ color: '#0D005B' }}>
+          {currentPage === 'create'
+            ? 'Create Card Set'
+            : currentPage === 'edit'
+            ? 'Edit Card Sets'
+            : currentPage === 'test'
+            ? 'Test Create'
+            : currentPage === 'ai'
+            ? 'AI Create'
+            : ''}
         </h1>
         {notification && (
           <Alert variant={notification.type === 'success' ? 'default' : 'destructive'} className="mb-4">
