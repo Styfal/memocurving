@@ -3,7 +3,6 @@
 
 import { useState, useEffect, SetStateAction } from 'react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import Sidebar from './sidebar';
 import CreateCardSet from './create-card-set';
 import EditCardSets from './edit-card-sets';
 import TestCreate from './test-create';
