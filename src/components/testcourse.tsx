@@ -150,7 +150,7 @@ export default function TestCourse() {
               className="h-40 w-auto"
             />
             <h1 className="text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
-              <span className="bg-[#0D005B] text-white px-2">Conduct</span> Tests
+              <span className="bg-[#0D005B] text-white px-2">Practice</span> Tests
             </h1>
           </div>
         </div>
