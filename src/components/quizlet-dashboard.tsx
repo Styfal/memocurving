@@ -316,7 +316,7 @@ export function QuizletDashboard() {
           <CardContent className="p-6">
             <div className="flex flex-col md:flex-row gap-6">
               <div className="flex-1">
-                <h2 className="text-2xl font-semibold mb-4">Your Portfolio</h2>
+                <h2 className="text-2xl font-semibold mb-4">Your Profile</h2>
                 <div className="flex items-center space-x-4 mb-4">
                   <Avatar className="h-20 w-20">
                     <AvatarImage src={userAvatar} alt="User avatar" />
