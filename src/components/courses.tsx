@@ -1,5 +1,9 @@
+
+
+
 // import { Button } from "@/components/ui/button";
 // import Link from "next/link";
+// import Image from "next/image";
 // import { useAuthState } from "react-firebase-hooks/auth";
 // import { auth, db } from "../lib/firebase";
 // import { collection, query, where, getDocs } from "firebase/firestore";
@@ -208,7 +212,7 @@
 //       userId: user ? user.uid : "unknown",
 //     };
 
-//     console.log("🚀 Sending payload to /api/tests (Basic):", JSON.stringify(requestData, null, 2));
+//     console.log("Sending payload to /api/tests (Basic):", JSON.stringify(requestData, null, 2));
 
 //     try {
 //       const response = await fetch("/api/tests", {
@@ -307,7 +311,7 @@
 //         userId: user ? user.uid : "unknown",
 //       };
 
-//       console.log("🚀 Sending payload to /api/tests (AI):", JSON.stringify(requestData, null, 2));
+//       console.log("Sending payload to /api/tests (AI):", JSON.stringify(requestData, null, 2));
 
 //       const response = await fetch("/api/tests", {
 //         method: "POST",
@@ -393,7 +397,13 @@
 //       <header className="py-6 px-4 md:px-6">
 //         <div className="container max-w-5xl mx-auto">
 //           <div className="flex items-center justify-center space-x-4 mb-2">
-//             <img src="/memocurvelogo.svg" alt="MemoCurve Logo" className="h-40 w-auto" />
+//             <Image
+//               src="/memocurvelogo.svg"
+//               alt="MemoCurve Logo"
+//               width={250}
+//               height={160}
+//               className="h-40 w-auto"
+//             />
 //             <h1 className="text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
 //               <span className="bg-[#0D005B] text-white px-2">Conduct</span> Flashcards
 //             </h1>
@@ -927,10 +937,11 @@ Do not include any additional text.
 `;
 
     try {
+      // Notice the addition of userId in the request body.
       const aiResponse = await fetch("/api/ai/openai", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({ prompt, userId: user ? user.uid : "unknown" }),
       });
       const aiResult = await aiResponse.json();
       console.log("AI Response:", aiResult);
