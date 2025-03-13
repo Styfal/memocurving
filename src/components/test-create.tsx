@@ -1,522 +1,5 @@
 
 
-// 'use client'
-
-// import { useState, useEffect } from 'react'
-// import { Button } from "@/components/ui/button"
-// import { Card, CardContent } from "@/components/ui/card"
-// import { Input } from "@/components/ui/input"
-// import { Label } from "@/components/ui/label"
-// import { Textarea } from "@/components/ui/textarea"
-// import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-// import { PlusIcon, SaveIcon, TrashIcon, ChevronUp, ChevronDown } from 'lucide-react'
-// import { z } from 'zod'
-// import { auth } from '@/lib/firebase'
-// import { User } from 'firebase/auth'
-
-// // Maximum allowed questions and word count limits
-// const MAX_QUESTIONS = 20
-// const MAX_WORD_COUNT = {
-//   setName: 10,
-//   setDescription: 50,
-//   question: 30,
-//   answer: 50,
-//   option: 50,
-// }
-
-// const FreeTestQuestionSchema = z.object({
-//   id: z.number(),
-//   question: z.string().min(1).refine(
-//     (val) => val.split(/\s+/).filter(Boolean).length <= MAX_WORD_COUNT.question,
-//     { message: `Question must be at most ${MAX_WORD_COUNT.question} words.` }
-//   ),
-//   answerType: z.enum(['multiple', 'short']),
-//   options: z.array(
-//     z.string().min(1).refine(
-//       (val) => val.split(/\s+/).filter(Boolean).length <= MAX_WORD_COUNT.option,
-//       { message: `Option must be at most ${MAX_WORD_COUNT.option} words.` }
-//     )
-//   ).optional(),
-//   correctAnswer: z.string().min(1).refine(
-//     (val) => val.split(/\s+/).filter(Boolean).length <= MAX_WORD_COUNT.answer,
-//     { message: `Answer must be at most ${MAX_WORD_COUNT.answer} words.` }
-//   ),
-//   image: z.string().nullable(),
-// })
-//   .refine(
-//     (data) =>
-//       data.answerType !== 'multiple' ||
-//       (data.options && new Set(data.options).size === data.options.length),
-//     { message: "Duplicate options are not allowed." }
-//   )
-//   .refine(
-//     (data) =>
-//       data.answerType !== 'multiple' ||
-//       (data.options && data.options.includes(data.correctAnswer)),
-//     { message: "Correct answer must be one of the options." }
-//   )
-
-// const FlashcardTestQuestionSchema = z.object({
-//   id: z.number(),
-//   question: z.string().min(1).refine(
-//     (val) => val.split(/\s+/).filter(Boolean).length <= MAX_WORD_COUNT.question,
-//     { message: `Question must be at most ${MAX_WORD_COUNT.question} words.` }
-//   ),
-//   answerType: z.literal('short'),
-//   correctAnswer: z.string().min(1).refine(
-//     (val) => val.split(/\s+/).filter(Boolean).length <= MAX_WORD_COUNT.answer,
-//     { message: `Answer must be at most ${MAX_WORD_COUNT.answer} words.` }
-//   ),
-//   image: z.string().nullable(),
-// })
-
-// const FreeTestSetSchema = z.object({
-//   id: z.number(),
-//   name: z.string().min(1).refine(
-//     (val) => val.split(/\s+/).filter(Boolean).length <= MAX_WORD_COUNT.setName,
-//     { message: `Test Set name must be at most ${MAX_WORD_COUNT.setName} words.` }
-//   ),
-//   description: z.string().min(0).refine(
-//     (val) => val.split(/\s+/).filter(Boolean).length <= MAX_WORD_COUNT.setDescription,
-//     { message: `Test Set description must be at most ${MAX_WORD_COUNT.setDescription} words.` }
-//   ),
-//   questions: z.array(FreeTestQuestionSchema).min(1).max(MAX_QUESTIONS),
-// })
-
-// const FlashcardTestSetSchema = z.object({
-//   id: z.number(),
-//   name: z.string().min(1).refine(
-//     (val) => val.split(/\s+/).filter(Boolean).length <= MAX_WORD_COUNT.setName,
-//     { message: `Test Set name must be at most ${MAX_WORD_COUNT.setName} words.` }
-//   ),
-//   description: z.string().min(0).refine(
-//     (val) => val.split(/\s+/).filter(Boolean).length <= MAX_WORD_COUNT.setDescription,
-//     { message: `Test Set description must be at most ${MAX_WORD_COUNT.setDescription} words.` }
-//   ),
-//   questions: z.array(FlashcardTestQuestionSchema).min(1).max(MAX_QUESTIONS),
-// })
-
-// type FreeTestQuestion = z.infer<typeof FreeTestQuestionSchema>
-// type FreeTestSet = z.infer<typeof FreeTestSetSchema>
-// type FlashcardTestQuestion = z.infer<typeof FlashcardTestQuestionSchema>
-// type FlashcardTestSet = z.infer<typeof FlashcardTestSetSchema>
-
-// interface Flashcard {
-//   id: number
-//   question: string
-//   answer: string
-//   image: string | null
-// }
-
-// export interface FlashcardDeck {
-//   id: number
-//   title: string
-//   description: string
-//   cards: Flashcard[]
-// }
-
-// interface TestCreateProps {
-//   setTestSets: React.Dispatch<React.SetStateAction<(FreeTestSet | FlashcardTestSet)[]>>
-//   setNotification?: (notification: { type: 'success' | 'error', message: string } | null) => void
-//   flashcardDeck?: FlashcardDeck
-//   existingTestSetsCount?: number
-// }
-
-// export default function TestCreate({
-//   setTestSets,
-//   setNotification = () => {},
-//   flashcardDeck,
-//   existingTestSetsCount = 0,
-// }: TestCreateProps) {
-//   const [currentUser, setCurrentUser] = useState<User | null>(null)
-//   useEffect(() => {
-//     const unsubscribe = auth.onAuthStateChanged((user) => setCurrentUser(user))
-//     return () => unsubscribe()
-//   }, [])
-
-//   const isFlashcardMode = !!flashcardDeck
-
-//   // If in flashcard mode, map flashcard deck cards to questions;
-//   // otherwise, initialize with 5 default free test questions.
-//   const initialQuestions = isFlashcardMode
-//     ? flashcardDeck!.cards.map((card) => ({
-//         id: card.id,
-//         question: card.question,
-//         answerType: 'short' as const,
-//         correctAnswer: card.answer,
-//         image: card.image,
-//       }))
-//     : Array.from({ length: 5 }, (_, index) => ({
-//         id: Date.now() + index,
-//         question: '',
-//         answerType: 'multiple' as const,
-//         options: ['', '', '', ''],
-//         correctAnswer: '',
-//         image: null,
-//       }))
-
-//   const [testQuestions, setTestQuestions] = useState<(FreeTestQuestion | FlashcardTestQuestion)[]>(initialQuestions)
-//   const [testSetName, setTestSetName] = useState(isFlashcardMode ? flashcardDeck!.title : '')
-//   const [testSetDescription, setTestSetDescription] = useState(isFlashcardMode ? flashcardDeck!.description : '')
-//   const [errors, setErrors] = useState<{ [key: string]: string }>({})
-
-//   // State to track which questions are collapsed
-//   const [collapsedQuestions, setCollapsedQuestions] = useState<Record<number, boolean>>({})
-
-//   // Local notification state for popup messages
-//   const [notification, setNotificationState] = useState<{ type: 'success' | 'error', message: string } | null>(null)
-
-//   // Helper function to display a notification popup
-//   const showNotification = (notif: { type: 'success' | 'error', message: string }) => {
-//     // Trigger the parent notification (if any) and update local state
-//     setNotification(notif)
-//     setNotificationState(notif)
-//     console.log('Notification:', notif) // Debug log
-//   }
-
-//   // Auto-dismiss notification after 5 seconds
-//   useEffect(() => {
-//     if (notification) {
-//       const timer = setTimeout(() => setNotificationState(null), 5000)
-//       return () => clearTimeout(timer)
-//     }
-//   }, [notification])
-
-//   const addTestQuestion = () => {
-//     if (testQuestions.length < MAX_QUESTIONS) {
-//       if (isFlashcardMode) {
-//         setTestQuestions([
-//           ...testQuestions,
-//           {
-//             id: Date.now(),
-//             question: '',
-//             answerType: 'short',
-//             correctAnswer: '',
-//             image: null,
-//           },
-//         ])
-//         showNotification({ type: 'success', message: 'Test question added successfully!' })
-//       } else {
-//         setTestQuestions([
-//           ...testQuestions,
-//           {
-//             id: Date.now(),
-//             question: '',
-//             answerType: 'multiple',
-//             options: ['', '', '', ''],
-//             correctAnswer: '',
-//             image: null,
-//           },
-//         ])
-//         showNotification({ type: 'success', message: 'Test question added successfully!' })
-//       }
-//     } else {
-//       showNotification({ type: 'error', message: `Maximum of ${MAX_QUESTIONS} questions allowed.` })
-//     }
-//   }
-
-//   const updateTestQuestion = (
-//     id: number,
-//     field: keyof (FreeTestQuestion | FlashcardTestQuestion),
-//     value: any
-//   ) => {
-//     setTestQuestions(testQuestions.map((q) => {
-//       if (q.id === id) {
-//         const updatedQuestion = { ...q, [field]: value }
-//         if (field === 'answerType' && value === 'short') {
-//           const { options, ...rest } = updatedQuestion
-//           return rest
-//         }
-//         return updatedQuestion
-//       }
-//       return q
-//     }))
-//   }
-
-//   const removeTestQuestion = (id: number) => {
-//     setTestQuestions(testQuestions.filter((q) => q.id !== id))
-//     setCollapsedQuestions((prev) => {
-//       const newState = { ...prev }
-//       delete newState[id]
-//       return newState
-//     })
-//     showNotification({ type: 'success', message: 'Test question removed successfully!' })
-//   }
-
-//   const toggleCollapse = (id: number) => {
-//     setCollapsedQuestions((prev) => ({ ...prev, [id]: !prev[id] }))
-//   }
-
-//   const saveTestSet = async () => {
-//     if (existingTestSetsCount >= 20) {
-//       showNotification({ type: 'error', message: 'Maximum of 20 test sets allowed.' })
-//       return
-//     }
-//     try {
-//       if (isFlashcardMode) {
-//         const newTestSet: FlashcardTestSet = {
-//           id: Date.now(),
-//           name: testSetName,
-//           description: testSetDescription,
-//           questions: testQuestions as FlashcardTestQuestion[],
-//         }
-//         const validatedSet = FlashcardTestSetSchema.parse(newTestSet)
-//         const requestData = {
-//           title: validatedSet.name,
-//           description: validatedSet.description,
-//           questions: validatedSet.questions.map((q) => ({
-//             question: q.question,
-//             correctAnswer: q.correctAnswer,
-//           })),
-//           createdAt: new Date().toISOString(),
-//           userId: currentUser ? currentUser.uid : 'unknown',
-//         }
-//         const response = await fetch('/api/tests', {
-//           method: 'POST',
-//           headers: { 'Content-Type': 'application/json' },
-//           body: JSON.stringify(requestData),
-//         })
-//         const result = await response.json()
-//         if (response.ok) {
-//           showNotification({ type: 'success', message: `Test set "${validatedSet.name}" saved successfully!` })
-//           setTestSets((prev) => [...prev, validatedSet])
-//           setTestQuestions([])
-//           setTestSetName('')
-//           setTestSetDescription('')
-//           setErrors({})
-//         } else {
-//           showNotification({ type: 'error', message: `Error: ${result.error}` })
-//         }
-//       } else {
-//         const newTestSet: FreeTestSet = {
-//           id: Date.now(),
-//           name: testSetName,
-//           description: testSetDescription,
-//           questions: testQuestions as FreeTestQuestion[],
-//         }
-//         const validatedSet = FreeTestSetSchema.parse(newTestSet)
-//         const requestData = {
-//           title: validatedSet.name,
-//           description: validatedSet.description,
-//           questions: validatedSet.questions.map((q) => ({
-//             question: q.question,
-//             answerType: q.answerType,
-//             correctAnswer: q.correctAnswer,
-//             ...(q.answerType === 'multiple' && { options: q.options }),
-//           })),
-//           createdAt: new Date().toISOString(),
-//           userId: currentUser ? currentUser.uid : 'unknown',
-//         }
-//         const response = await fetch('/api/tests', {
-//           method: 'POST',
-//           headers: { 'Content-Type': 'application/json' },
-//           body: JSON.stringify(requestData),
-//         })
-//         const result = await response.json()
-//         if (response.ok) {
-//           showNotification({ type: 'success', message: `Test set "${validatedSet.name}" saved successfully!` })
-//           setTestSets((prev) => [...prev, validatedSet])
-//           setTestQuestions([])
-//           setTestSetName('')
-//           setTestSetDescription('')
-//           setErrors({})
-//         } else {
-//           showNotification({ type: 'error', message: `Error: ${result.error}` })
-//         }
-//       }
-//     } catch (error) {
-//       if (error instanceof z.ZodError) {
-//         const newErrors: { [key: string]: string } = {}
-//         error.errors.forEach((err) => {
-//           newErrors[err.path.join('.')] = err.message
-//         })
-//         setErrors(newErrors)
-//         showNotification({ type: 'error', message: "Please correct the errors in the form." })
-//       }
-//     }
-//   }
-
-//   return (
-//     <div className="min-h-screen bg-gray-100">
-//       {/* Notification Popup */}
-//       {notification && (
-//         <div className="fixed top-4 right-4 z-[9999]">
-//           <div className={`p-4 rounded shadow-lg ${notification.type === 'error' ? 'bg-red-50 border-l-4 border-red-500 text-red-800' : 'bg-green-50 border-l-4 border-green-500 text-green-800'}`}>
-//             <p className="text-xl font-medium">{notification.message}</p>
-//           </div>
-//         </div>
-//       )}
-
-//       {/* Top Header Bar */}
-//       <header className="w-full bg-gray-100 py-4">
-//         <h1 className="text-center text-3xl font-bold" style={{ color: "#0D005B" }}>
-//           Create Tests
-//         </h1>
-//       </header>
-
-//       {/* Main Content Area */}
-//       <main className="mt-8">
-//         <div className="p-8 w-[60%] mx-auto flex flex-col items-center bg-gray-100">
-//           <div className="w-full space-y-6">
-//             <div className="space-y-2">
-//               <Label htmlFor="test-set-name" className="text-lg text-cyan-700">
-//                 Test Set Name (10 words max)
-//               </Label>
-//               <Input
-//                 id="test-set-name"
-//                 value={testSetName}
-//                 onChange={(e) => setTestSetName(e.target.value)}
-//                 placeholder="Enter test set name"
-//                 className="bg-white/50 border-cyan-200 focus:border-cyan-500 focus:ring-cyan-500"
-//               />
-//               {errors['name'] && <p className="text-red-500 text-lg">{errors['name']}</p>}
-//             </div>
-//             <div className="space-y-2">
-//               <Label htmlFor="test-set-description" className="text-lg text-cyan-700">
-//                 Test Set Description (50 words max)
-//               </Label>
-//               <Textarea
-//                 id="test-set-description"
-//                 value={testSetDescription}
-//                 onChange={(e) => setTestSetDescription(e.target.value)}
-//                 placeholder="Enter test set description"
-//                 className="bg-white/50 border-cyan-200 focus:border-cyan-500 focus:ring-cyan-500"
-//               />
-//               {errors['description'] && <p className="text-red-500 text-lg">{errors['description']}</p>}
-//             </div>
-
-//             {/* Header Row: Questions Counter & Add Question Button */}
-//             <div className="flex items-center justify-between mt-8">
-//               <p className="text-lg font-semibold text-gray-700">
-//                 {`Questions: ${testQuestions.length} of ${MAX_QUESTIONS}`}
-//               </p>
-//               <Button
-//                 variant="secondary"
-//                 onClick={addTestQuestion}
-//                 disabled={testQuestions.length >= MAX_QUESTIONS}
-//                 className="mr-2"
-//               >
-//                 <PlusIcon className="w-4 h-4 mr-2" />
-//                 Add Question
-//               </Button>
-//             </div>
-
-//             {testQuestions.map((question, index) => (
-//               <Card key={question.id} className="bg-white/50">
-//                 {/* Card Header with Collapse Toggle */}
-//                 <div className="flex items-center justify-between p-4 border-b">
-//                   <p className="text-lg font-bold text-gray-800">Question {index + 1}</p>
-//                   <Button
-//                     variant="secondary"
-//                     onClick={() => toggleCollapse(question.id)}
-//                     className="p-2"
-//                   >
-//                     {collapsedQuestions[question.id] ? (
-//                       <ChevronDown className="w-5 h-5" />
-//                     ) : (
-//                       <ChevronUp className="w-5 h-5" />
-//                     )}
-//                   </Button>
-//                 </div>
-//                 {!collapsedQuestions[question.id] && (
-//                   <CardContent className="p-4 space-y-4">
-//                     <div>
-//                       <Label htmlFor={`test-question-${question.id}`} className="text-lg text-cyan-700">
-//                         Question (30 words max)
-//                       </Label>
-//                       <Input
-//                         id={`test-question-${question.id}`}
-//                         value={question.question}
-//                         onChange={(e) => updateTestQuestion(question.id, 'question', e.target.value)}
-//                         placeholder="Enter the question"
-//                         className="mt-1 bg-white/50 border-cyan-200 focus:border-cyan-500 focus:ring-cyan-500"
-//                       />
-//                     </div>
-//                     {!isFlashcardMode && (
-//                       <div>
-//                         <Label className="text-lg text-cyan-700">Answer Type</Label>
-//                         <RadioGroup
-//                           value={question.answerType}
-//                           onValueChange={(value) => updateTestQuestion(question.id, 'answerType', value)}
-//                           className="flex space-x-4 mt-1"
-//                         >
-//                           <div className="flex items-center space-x-2">
-//                             <RadioGroupItem value="multiple" id={`multiple-${question.id}`} />
-//                             <Label htmlFor={`multiple-${question.id}`}>Multiple Choice</Label>
-//                           </div>
-//                           <div className="flex items-center space-x-2">
-//                             <RadioGroupItem value="short" id={`short-${question.id}`} />
-//                             <Label htmlFor={`short-${question.id}`}>Short Answer</Label>
-//                           </div>
-//                         </RadioGroup>
-//                       </div>
-//                     )}
-//                     {!isFlashcardMode && question.answerType === 'multiple' && (
-//                       <div className="space-y-2">
-//                         <Label className="text-lg text-cyan-700">
-//                           Options (50 words max each)
-//                         </Label>
-//                         {question.options?.map((option, optionIndex) => (
-//                           <Input
-//                             key={optionIndex}
-//                             value={option}
-//                             onChange={(e) => {
-//                               const newOptions = [...(question.options || [])]
-//                               newOptions[optionIndex] = e.target.value
-//                               updateTestQuestion(question.id, 'options', newOptions)
-//                             }}
-//                             placeholder={`Option ${optionIndex + 1}`}
-//                             className="mt-1 bg-white/50 border-cyan-200 focus:border-cyan-500 focus:ring-cyan-500"
-//                           />
-//                         ))}
-//                       </div>
-//                     )}
-//                     <div>
-//                       <Label htmlFor={`correct-answer-${question.id}`} className="text-lg text-cyan-700">
-//                         Correct Answer (50 words max)
-//                       </Label>
-//                       <Input
-//                         id={`correct-answer-${question.id}`}
-//                         value={question.correctAnswer}
-//                         onChange={(e) => updateTestQuestion(question.id, 'correctAnswer', e.target.value)}
-//                         placeholder="Enter the correct answer"
-//                         className="mt-1 bg-white/50 border-cyan-200 focus:border-cyan-500 focus:ring-cyan-500"
-//                       />
-//                     </div>
-//                     <Button
-//                       onClick={() => removeTestQuestion(question.id)}
-//                       className="p-2 focus:outline-none border-0 text-gray-700 hover:text-gray-900 transition-colors duration-200"
-//                       title="Remove Question"
-//                     >
-//                       <TrashIcon className="w-5 h-5" />
-//                     </Button>
-//                   </CardContent>
-//                 )}
-//               </Card>
-//             ))}
-
-//             <Button
-//               variant="default"
-//               onClick={saveTestSet}
-//               disabled={!testSetName || testQuestions.length === 0}
-//               className="bg-gray-400 hover:bg-gray-500 text-white text-xl py-4 px-8 rounded-lg transition-colors duration-200"
-//             >
-//               <SaveIcon className="w-4 h-4 mr-2" />
-//               Save Test Set
-//             </Button>
-
-          
-//           </div>
-//         </div>
-//       </main>
-//     </div>
-//   )
-// }
-
-
-
-
-
 
 'use client'
 
@@ -549,6 +32,7 @@ const FreeTestQuestionSchema = z.object({
     { message: `Question must be at most ${MAX_WORD_COUNT.question} words.` }
   ),
   answerType: z.enum(['multiple', 'short']),
+  // options is optional in the schema but is expected for multiple-choice questions
   options: z.array(
     z.string().min(1).refine(
       (val) => val.split(/\s+/).filter(Boolean).length <= MAX_WORD_COUNT.option,
@@ -643,15 +127,14 @@ interface TestCreateProps {
   existingTestSetsCount?: number
 }
 
-// Allow updating the "options" field even though it is only present on free test questions.
 type TestQuestionField = 'question' | 'answerType' | 'correctAnswer' | 'image' | 'options'
 
-export default function TestCreate({
+const TestCreate = ({
   setTestSets,
   setNotification = () => {},
   flashcardDeck,
   existingTestSetsCount = 0,
-}: TestCreateProps) {
+}: TestCreateProps) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => setCurrentUser(user))
@@ -660,8 +143,6 @@ export default function TestCreate({
 
   const isFlashcardMode = !!flashcardDeck
 
-  // If in flashcard mode, map flashcard deck cards to questions;
-  // otherwise, initialize with 5 default free test questions.
   const initialQuestions = isFlashcardMode
     ? flashcardDeck!.cards.map((card) => ({
         id: card.id,
@@ -684,26 +165,21 @@ export default function TestCreate({
   const [testSetDescription, setTestSetDescription] = useState(isFlashcardMode ? flashcardDeck!.description : '')
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
 
-  // State to track which questions are collapsed
   const [collapsedQuestions, setCollapsedQuestions] = useState<Record<number, boolean>>({})
+  const [notificationState, setNotificationState] = useState<{ type: 'success' | 'error', message: string } | null>(null)
 
-  // Local notification state for popup messages
-  const [notification, setNotificationState] = useState<{ type: 'success' | 'error', message: string } | null>(null)
-
-  // Helper function to display a notification popup
   const showNotification = (notif: { type: 'success' | 'error', message: string }) => {
     setNotification(notif)
     setNotificationState(notif)
     console.log('Notification:', notif)
   }
 
-  // Auto-dismiss notification after 5 seconds
   useEffect(() => {
-    if (notification) {
+    if (notificationState) {
       const timer = setTimeout(() => setNotificationState(null), 5000)
       return () => clearTimeout(timer)
     }
-  }, [notification])
+  }, [notificationState])
 
   const addTestQuestion = () => {
     if (testQuestions.length < MAX_QUESTIONS) {
@@ -738,17 +214,17 @@ export default function TestCreate({
     }
   }
 
-  const updateTestQuestion = (
-    id: number,
-    field: TestQuestionField,
-    value: any
-  ) => {
+  const updateTestQuestion = (id: number, field: TestQuestionField, value: any) => {
     setTestQuestions(testQuestions.map((q) => {
       if (q.id === id) {
         const updatedQuestion = { ...q, [field]: value }
         if (field === 'answerType' && value === 'short') {
-          const { options, ...rest } = updatedQuestion
-          return rest
+          if ('options' in updatedQuestion) {
+            const { options, ...rest } = updatedQuestion
+            return rest
+          } else {
+            return updatedQuestion
+          }
         }
         return updatedQuestion
       }
@@ -777,17 +253,17 @@ export default function TestCreate({
     }
     try {
       if (isFlashcardMode) {
-        const newTestSet: FlashcardTestSet = {
+        const newTestSet: any = {
           id: Date.now(),
           name: testSetName,
           description: testSetDescription,
-          questions: testQuestions as FlashcardTestQuestion[],
+          questions: testQuestions,
         }
         const validatedSet = FlashcardTestSetSchema.parse(newTestSet)
         const requestData = {
           title: validatedSet.name,
           description: validatedSet.description,
-          questions: validatedSet.questions.map((q) => ({
+          questions: validatedSet.questions.map((q: any) => ({
             question: q.question,
             correctAnswer: q.correctAnswer,
           })),
@@ -811,17 +287,17 @@ export default function TestCreate({
           showNotification({ type: 'error', message: `Error: ${result.error}` })
         }
       } else {
-        const newTestSet: FreeTestSet = {
+        const newTestSet: any = {
           id: Date.now(),
           name: testSetName,
           description: testSetDescription,
-          questions: testQuestions as FreeTestQuestion[],
+          questions: testQuestions,
         }
         const validatedSet = FreeTestSetSchema.parse(newTestSet)
         const requestData = {
           title: validatedSet.name,
           description: validatedSet.description,
-          questions: validatedSet.questions.map((q) => ({
+          questions: validatedSet.questions.map((q: any) => ({
             question: q.question,
             answerType: q.answerType,
             correctAnswer: q.correctAnswer,
@@ -862,10 +338,10 @@ export default function TestCreate({
   return (
     <div className="min-h-screen bg-gray-100">
       {/* Notification Popup */}
-      {notification && (
+      {notificationState && (
         <div className="fixed top-4 right-4 z-[9999]">
-          <div className={`p-4 rounded shadow-lg ${notification.type === 'error' ? 'bg-red-50 border-l-4 border-red-500 text-red-800' : 'bg-green-50 border-l-4 border-green-500 text-green-800'}`}>
-            <p className="text-xl font-medium">{notification.message}</p>
+          <div className={`p-4 rounded shadow-lg ${notificationState.type === 'error' ? 'bg-red-50 border-l-4 border-red-500 text-red-800' : 'bg-green-50 border-l-4 border-green-500 text-green-800'}`}>
+            <p className="text-xl font-medium">{notificationState.message}</p>
           </div>
         </div>
       )}
@@ -924,99 +400,104 @@ export default function TestCreate({
               </Button>
             </div>
 
-            {testQuestions.map((question, index) => (
-              <Card key={question.id} className="bg-white/50">
-                {/* Card Header with Collapse Toggle */}
-                <div className="flex items-center justify-between p-4 border-b">
-                  <p className="text-lg font-bold text-gray-800">Question {index + 1}</p>
-                  <Button
-                    variant="secondary"
-                    onClick={() => toggleCollapse(question.id)}
-                    className="p-2"
-                  >
-                    {collapsedQuestions[question.id] ? (
-                      <ChevronDown className="w-5 h-5" />
-                    ) : (
-                      <ChevronUp className="w-5 h-5" />
-                    )}
-                  </Button>
-                </div>
-                {!collapsedQuestions[question.id] && (
-                  <CardContent className="p-4 space-y-4">
-                    <div>
-                      <Label htmlFor={`test-question-${question.id}`} className="text-lg text-cyan-700">
-                        Question (30 words max)
-                      </Label>
-                      <Input
-                        id={`test-question-${question.id}`}
-                        value={question.question}
-                        onChange={(e) => updateTestQuestion(question.id, 'question', e.target.value)}
-                        placeholder="Enter the question"
-                        className="mt-1 bg-white/50 border-cyan-200 focus:border-cyan-500 focus:ring-cyan-500"
-                      />
-                    </div>
-                    {!isFlashcardMode && (
-                      <div>
-                        <Label className="text-lg text-cyan-700">Answer Type</Label>
-                        <RadioGroup
-                          value={question.answerType}
-                          onValueChange={(value) => updateTestQuestion(question.id, 'answerType', value)}
-                          className="flex space-x-4 mt-1"
-                        >
-                          <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="multiple" id={`multiple-${question.id}`} />
-                            <Label htmlFor={`multiple-${question.id}`}>Multiple Choice</Label>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="short" id={`short-${question.id}`} />
-                            <Label htmlFor={`short-${question.id}`}>Short Answer</Label>
-                          </div>
-                        </RadioGroup>
-                      </div>
-                    )}
-                    {!isFlashcardMode && question.answerType === 'multiple' && ('options' in question) && (
-                      <div className="space-y-2">
-                        <Label className="text-lg text-cyan-700">
-                          Options (50 words max each)
-                        </Label>
-                        {question.options?.map((option, optionIndex) => (
-                          <Input
-                            key={optionIndex}
-                            value={option}
-                            onChange={(e) => {
-                              const newOptions = [...(question.options || [])]
-                              newOptions[optionIndex] = e.target.value
-                              updateTestQuestion(question.id, 'options', newOptions)
-                            }}
-                            placeholder={`Option ${optionIndex + 1}`}
-                            className="mt-1 bg-white/50 border-cyan-200 focus:border-cyan-500 focus:ring-cyan-500"
-                          />
-                        ))}
-                      </div>
-                    )}
-                    <div>
-                      <Label htmlFor={`correct-answer-${question.id}`} className="text-lg text-cyan-700">
-                        Correct Answer (50 words max)
-                      </Label>
-                      <Input
-                        id={`correct-answer-${question.id}`}
-                        value={question.correctAnswer}
-                        onChange={(e) => updateTestQuestion(question.id, 'correctAnswer', e.target.value)}
-                        placeholder="Enter the correct answer"
-                        className="mt-1 bg-white/50 border-cyan-200 focus:border-cyan-500 focus:ring-cyan-500"
-                      />
-                    </div>
+            {testQuestions.map((question, index) => {
+              // Locally extract options if answerType is multiple.
+              const localOptions: string[] =
+                question.answerType === 'multiple' && question.options ? question.options : [];
+              return (
+                <Card key={question.id} className="bg-white/50">
+                  {/* Card Header with Collapse Toggle */}
+                  <div className="flex items-center justify-between p-4 border-b">
+                    <p className="text-lg font-bold text-gray-800">Question {index + 1}</p>
                     <Button
-                      onClick={() => removeTestQuestion(question.id)}
-                      className="p-2 focus:outline-none border-0 text-gray-700 hover:text-gray-900 transition-colors duration-200"
-                      title="Remove Question"
+                      variant="secondary"
+                      onClick={() => toggleCollapse(question.id)}
+                      className="p-2"
                     >
-                      <TrashIcon className="w-5 h-5" />
+                      {collapsedQuestions[question.id] ? (
+                        <ChevronDown className="w-5 h-5" />
+                      ) : (
+                        <ChevronUp className="w-5 h-5" />
+                      )}
                     </Button>
-                  </CardContent>
-                )}
-              </Card>
-            ))}
+                  </div>
+                  {!collapsedQuestions[question.id] && (
+                    <CardContent className="p-4 space-y-4">
+                      <div>
+                        <Label htmlFor={`test-question-${question.id}`} className="text-lg text-cyan-700">
+                          Question (30 words max)
+                        </Label>
+                        <Input
+                          id={`test-question-${question.id}`}
+                          value={question.question}
+                          onChange={(e) => updateTestQuestion(question.id, 'question', e.target.value)}
+                          placeholder="Enter the question"
+                          className="mt-1 bg-white/50 border-cyan-200 focus:border-cyan-500 focus:ring-cyan-500"
+                        />
+                      </div>
+                      {!isFlashcardMode && (
+                        <div>
+                          <Label className="text-lg text-cyan-700">Answer Type</Label>
+                          <RadioGroup
+                            value={question.answerType}
+                            onValueChange={(value) => updateTestQuestion(question.id, 'answerType', value)}
+                            className="flex space-x-4 mt-1"
+                          >
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="multiple" id={`multiple-${question.id}`} />
+                              <Label htmlFor={`multiple-${question.id}`}>Multiple Choice</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="short" id={`short-${question.id}`} />
+                              <Label htmlFor={`short-${question.id}`}>Short Answer</Label>
+                            </div>
+                          </RadioGroup>
+                        </div>
+                      )}
+                      {!isFlashcardMode && question.answerType === 'multiple' && question.options && (
+                        <div className="space-y-2">
+                          <Label className="text-lg text-cyan-700">
+                            Options (50 words max each)
+                          </Label>
+                          {localOptions.map((option, optionIndex) => (
+                            <Input
+                              key={optionIndex}
+                              value={option}
+                              onChange={(e) => {
+                                const newOptions = [...localOptions]
+                                newOptions[optionIndex] = e.target.value
+                                updateTestQuestion(question.id, 'options', newOptions)
+                              }}
+                              placeholder={`Option ${optionIndex + 1}`}
+                              className="mt-1 bg-white/50 border-cyan-200 focus:border-cyan-500 focus:ring-cyan-500"
+                            />
+                          ))}
+                        </div>
+                      )}
+                      <div>
+                        <Label htmlFor={`correct-answer-${question.id}`} className="text-lg text-cyan-700">
+                          Correct Answer (50 words max)
+                        </Label>
+                        <Input
+                          id={`correct-answer-${question.id}`}
+                          value={question.correctAnswer}
+                          onChange={(e) => updateTestQuestion(question.id, 'correctAnswer', e.target.value)}
+                          placeholder="Enter the correct answer"
+                          className="mt-1 bg-white/50 border-cyan-200 focus:border-cyan-500 focus:ring-cyan-500"
+                        />
+                      </div>
+                      <Button
+                        onClick={() => removeTestQuestion(question.id)}
+                        className="p-2 focus:outline-none border-0 text-gray-700 hover:text-gray-900 transition-colors duration-200"
+                        title="Remove Question"
+                      >
+                        <TrashIcon className="w-5 h-5" />
+                      </Button>
+                    </CardContent>
+                  )}
+                </Card>
+              )
+            })}
 
             <Button
               variant="default"
@@ -1027,10 +508,11 @@ export default function TestCreate({
               <SaveIcon className="w-4 h-4 mr-2" />
               Save Test Set
             </Button>
-
           </div>
         </div>
       </main>
     </div>
   )
 }
+
+export default TestCreate
