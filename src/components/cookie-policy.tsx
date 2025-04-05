@@ -17,10 +17,10 @@ export default function CookiePolicy() {
           <div className="space-y-6">
             <section>
               <h2 className="text-xl font-semibold mb-2">
-                6. Cookies and Similar Technologies
+                1. Cookies and Similar Technologies
               </h2>
               <h3 className="text-lg font-medium mt-4 mb-2">
-                6.1 Types of Cookies Employed
+                1.1 Types of Cookies Employed
               </h3>
               <p>
                 We use cookies and similar tracking technologies to collect and use
@@ -43,7 +43,7 @@ export default function CookiePolicy() {
                 </li>
               </ul>
               <h3 className="text-lg font-medium mt-4 mb-2">
-                6.2 Purpose of Cookies
+                1.2 Purpose of Cookies
               </h3>
               <p>Cookies are employed for various purposes, including:</p>
               <ul className="list-disc list-inside ml-4">
@@ -61,7 +61,7 @@ export default function CookiePolicy() {
                 </li>
               </ul>
               <h3 className="text-lg font-medium mt-4 mb-2">
-                6.3 Management of Cookies
+                1.3 Management of Cookies
               </h3>
               <p>
                 You have the option to control and manage cookies through your
